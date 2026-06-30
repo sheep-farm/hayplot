@@ -9,10 +9,10 @@ use std::sync::Arc;
 // Exposes dynamic library C ABI deallocation hooks
 hayashi_plugin!();
 
-/// 1. ggplot(df, aes)
+/// 1. hayplot(df, aes)
 /// Initializes the plot specification dictionary with data and aesthetic mapping.
 #[hayashi_fn]
-pub fn ggplot(
+pub fn hayplot(
     df: ArrayRef,
     aes: HashMap<String, HayashiValue>
 ) -> HashMap<String, HayashiValue> {
