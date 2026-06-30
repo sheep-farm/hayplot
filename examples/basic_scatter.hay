@@ -2,7 +2,7 @@
 // Run this from the root of the hayplot repository:
 // hay examples/basic_scatter.hay
 
-import("./target/debug/libhayplot.so", as=gg)
+import("sheep-farm/hayplot", as=gg)
 
 // 1. Create GDP vs Life Expectancy dataset
 let data = {"gdp_per_capita": [12000, 24000, 35000, 48000, 65000, 85000], "life_expectancy": [68.5, 72.1, 76.4, 79.2, 81.5, 83.1]}

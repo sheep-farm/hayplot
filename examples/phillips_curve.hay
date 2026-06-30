@@ -2,7 +2,7 @@
 // Run this from the root of the hayplot repository:
 // hay examples/phillips_curve.hay
 
-import("./target/debug/libhayplot.so", as=gg)
+import("sheep-farm/hayplot", as=gg)
 
 // 1. Create simulated macroeconomic dataset
 let data = {"unemployment_rate": [3.5, 4.2, 5.0, 6.1, 7.5, 8.8, 9.5], "inflation_rate": [5.2, 4.5, 3.8, 2.9, 1.8, 1.2, 0.9]}
