@@ -1,0 +1,21 @@
+// Basic Scatter Plot Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/basic_scatter.hay
+
+import("./target/debug/libhayplot.so", as=gg)
+
+// 1. Create GDP vs Life Expectancy dataset
+let data = {"gdp_per_capita": [12000, 24000, 35000, 48000, 65000, 85000], "life_expectancy": [68.5, 72.1, 76.4, 79.2, 81.5, 83.1]}
+let df = dataframe(data)
+
+// 2. Build the plot specification
+print("Building basic scatter plot...")
+let plot = gg::hayplot(df, {"x": "gdp_per_capita", "y": "life_expectancy"}) |> gg::geom_point("blue", 7.0) |> gg::labs("GDP vs Life Expectancy", "GDP per Capita (USD)", "Life Expectancy (Years)")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "gdp_life_exp.svg")
+print("Plot successfully saved to 'gdp_life_exp.svg'!")

@@ -1,0 +1,19 @@
+// Phillips Curve (Inflation vs Unemployment) Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/phillips_curve.hay
+
+import("./target/debug/libhayplot.so", as=gg)
+
+// 1. Create simulated macroeconomic dataset
+let data = {"unemployment_rate": [3.5, 4.2, 5.0, 6.1, 7.5, 8.8, 9.5], "inflation_rate": [5.2, 4.5, 3.8, 2.9, 1.8, 1.2, 0.9]}
+let df = dataframe(data)
+
+// 2. Build the Phillips Curve plot specification
+print("Building Phillips Curve plot...")
+let plot = gg::hayplot(df, {"x": "unemployment_rate", "y": "inflation_rate"}) |> gg::geom_point("red", 8.0) |> gg::labs("The Phillips Curve", "Unemployment Rate (%)", "Inflation Rate (%)")
+
+// 3. Render and save the SVG
+print("Rendering and saving output...")
+let svg_content = gg::render_svg(plot)
+write(svg_content, "phillips_curve.svg")
+print("Plot successfully saved to 'phillips_curve.svg'!")
