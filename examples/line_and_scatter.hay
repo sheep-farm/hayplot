@@ -1,0 +1,27 @@
+// Combination of Line and Scatter Plots Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/line_and_scatter.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a simulated time series dataset (e.g. sales growth over months)
+let data = {
+    "month": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "sales": [10.5, 12.0, 11.2, 14.8, 16.5, 15.0, 18.2, 21.0, 19.5, 22.8, 25.0, 24.2]
+}
+let df = dataframe(data)
+
+// 2. Build the plot specification with BOTH geom_line and geom_point
+print("Building line and scatter plot...")
+let plot = gg::hayplot(df, {"x": "month", "y": "sales"})
+    |> gg::geom_line("blue", 3.0)      // Line layer (thickness = 3)
+    |> gg::geom_point("red", 6.0)      // Point layer on top (radius = 6)
+    |> gg::labs("Sales Growth Over Time", "Month", "Sales (Thousands)")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "sales_growth.svg")
+print("Plot successfully saved to 'sales_growth.svg'!")

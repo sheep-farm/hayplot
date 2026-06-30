@@ -1,0 +1,878 @@
+% ============================================================
+%  hayplot — Manual de Referência
+%  Um plugin de visualização declarativa para a linguagem Hayashi
+%  Compilar com: lualatex -interaction=nonstopmode manual.tex
+% ============================================================
+\documentclass[12pt, a4paper, oneside]{book}
+
+% ── Idioma ─────────────────────────────────────────────────────────────────
+\usepackage[brazilian]{babel}
+
+% ── Tipografia (LuaLaTeX nativo) ────────────────────────────────────────────
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}
+\setmonofont{Latin Modern Mono}
+\usepackage{microtype}
+
+% ── Geometria e layout ──────────────────────────────────────────────────────
+\usepackage[
+  top=2.5cm, bottom=2.5cm,
+  left=3cm,  right=2.5cm,
+  headheight=15pt
+]{geometry}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{\leftmark}}
+\fancyhead[R]{\small\textit{hayplot}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Cores ───────────────────────────────────────────────────────────────────
+\usepackage[dvipsnames, table]{xcolor}
+\definecolor{hayblue}{HTML}{1565C0}
+\definecolor{haygray}{HTML}{455A64}
+\definecolor{haylight}{HTML}{E3F2FD}
+\definecolor{codebg}{HTML}{F5F5F5}
+\definecolor{haygreen}{HTML}{1B5E20}
+\definecolor{hayred}{HTML}{B71C1C}
+\definecolor{hayyellow}{HTML}{F57F17}
+
+% ── Código-fonte ────────────────────────────────────────────────────────────
+\usepackage{listings}
+\lstdefinelanguage{hayashi}{
+  morekeywords={let, const, fn, return, if, else, for, in, while, break,
+                continue, import, load, generate, replace, display, print,
+                export, write, dataframe, describe, predict, ols},
+  sensitive=true,
+  morestring=[b]",
+  morecomment=[l]{//},
+}
+\lstset{
+  language=hayashi,
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{hayblue}\bfseries,
+  stringstyle=\color{haygreen},
+  commentstyle=\color{haygray}\itshape,
+  numberstyle=\tiny\color{haygray},
+  breaklines=true,
+  breakatwhitespace=false,
+  showstringspaces=false,
+  tabsize=4,
+  frame=single,
+  framesep=4pt,
+  framerule=0.4pt,
+  rulecolor=\color{haygray!40},
+  numbers=left,
+  xleftmargin=1.5em,
+  aboveskip=0.8em,
+  belowskip=0.8em,
+  captionpos=b,
+}
+
+% Estilo sem números para trechos inline
+\lstdefinestyle{inline}{
+  numbers=none,
+  xleftmargin=0pt,
+  frame=none,
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+}
+
+% ── Hyperlinks ──────────────────────────────────────────────────────────────
+\usepackage[
+  colorlinks=true,
+  linkcolor=hayblue,
+  urlcolor=hayblue,
+  citecolor=haygray,
+  pdftitle={hayplot — Manual de Referência},
+  pdfauthor={sheep-farm},
+  pdfsubject={Plugin de visualização declarativa para Hayashi},
+]{hyperref}
+
+% ── Caixas informativas ─────────────────────────────────────────────────────
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{infobox}[1][]{
+  enhanced, breakable,
+  colback=haylight, colframe=hayblue,
+  fonttitle=\bfseries\small,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  #1
+}
+\newtcolorbox{warnbox}[1][]{
+  enhanced, breakable,
+  colback=hayyellow!10, colframe=hayyellow!70!black,
+  fonttitle=\bfseries\small,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  #1
+}
+\newtcolorbox{tipbox}[1][]{
+  enhanced, breakable,
+  colback=green!6, colframe=haygreen,
+  fonttitle=\bfseries\small,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  #1
+}
+
+% ── Tabelas ─────────────────────────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% ── Ícones (sem fontawesome5) ──────────────────────────────────────────────
+% Usa texto simples em vez de ícones para máxima portabilidade
+
+% ── Índice ──────────────────────────────────────────────────────────────────
+\usepackage{makeidx}
+\makeindex
+\usepackage{amssymb} % para \checkmark
+
+% ── Atalhos ─────────────────────────────────────────────────────────────────
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\hayashi}{\textsc{Hayashi}}
+\newcommand{\hayplot}{\textbf{hayplot}}
+
+% ── Metadados da versão ─────────────────────────────────────────────────────
+\newcommand{\hayversiontag}{v0.1.0}
+\newcommand{\hayashiversiontag}{0.2.6}
+
+% ============================================================
+%  DOCUMENTO
+% ============================================================
+\begin{document}
+
+% ── Página de título ────────────────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{2.5cm}
+
+  {\Huge\bfseries\color{hayblue} hayplot}\\[0.4em]
+  {\large\color{haygray} Plugin de Visualização Declarativa para \hayashi}
+
+  \vspace{1.5cm}
+
+  \begin{tcolorbox}[
+    enhanced, sharp corners,
+    colback=hayblue, colframe=hayblue,
+    width=0.85\textwidth,
+    halign=center,
+    fontupper=\color{white}\large
+  ]
+    \textbf{Grammar of Graphics} para a linguagem \hayashi \\[0.2em]
+    \small Baseado em Apache Arrow FFI e Plotters (Rust puro)
+  \end{tcolorbox}
+
+  \vspace{2cm}
+
+  \begin{tabularx}{0.65\textwidth}{@{}lX@{}}
+    \toprule
+    \textbf{Versão hayplot}     & \hayversiontag \\
+    \textbf{Versão \hayashi{}}  & \hayashiversiontag \\
+    \textbf{Repositório}        & \href{https://github.com/sheep-farm/hayplot}{\code{sheep-farm/hayplot}} \\
+    \textbf{Licença}            & MIT \\
+    \bottomrule
+  \end{tabularx}
+
+  \vfill
+  {\small \today}
+\end{titlepage}
+
+% ── Sumário ─────────────────────────────────────────────────────────────────
+\tableofcontents
+\clearpage
+
+% ============================================================
+\chapter{Introdução}
+% ============================================================
+
+\hayplot{} é um plugin nativo para a linguagem \hayashi{} que implementa
+uma \textbf{Gramática de Gráficos} (\textit{Grammar of Graphics}) ao estilo do
+\code{ggplot2} do R. Ele permite construir visualizações de dados de forma
+declarativa e composicional, usando o operador de pipe \code{|>} da linguagem.
+
+\section{Filosofia}
+
+A ideia central é que um gráfico pode ser descrito como a composição de
+\emph{camadas semânticas independentes}:
+
+\begin{enumerate}
+  \item \textbf{Dados} — o DataFrame de entrada;
+  \item \textbf{Mapeamento estético} (\textit{aes}) — quais colunas mapeiam para $x$ e $y$;
+  \item \textbf{Geometrias} (\textit{geoms}) — como os dados serão representados visualmente;
+  \item \textbf{Rótulos} (\textit{labs}) — título e nomes dos eixos.
+\end{enumerate}
+
+Cada camada é uma transformação pura de um dicionário de especificação, e a
+renderização final acontece apenas ao chamar \code{render\_svg()}.
+
+\section{Características Técnicas}
+
+\begin{itemize}
+  \item \textbf{Zero-Copy}: os dados do DataFrame são compartilhados com o plugin via
+        Apache Arrow FFI sem cópia ou serialização --- o ponteiro Arrow é
+        passado diretamente.
+
+  \item \textbf{Rust puro}: usa a crate \code{plotters} compilada sem dependências
+        externas de sistema (\textit{freetype}, \textit{fontconfig} não são necessários),
+        garantindo portabilidade em Linux, macOS e Windows.
+
+  \item \textbf{Saída SVG}: gera SVG vetorial escalável, adequado para publicação,
+        relatórios em \LaTeX{} e inclusão em documentos web.
+
+  \item \textbf{Composicional}: cada função recebe e retorna um \code{Dict}, tornando
+        qualquer pipeline de plot testável, inspecionável e modificável.
+\end{itemize}
+
+\section{Instalação}
+\index{instalação}
+
+Instale o plugin diretamente do GitHub usando a CLI do \hayashi{}:
+
+\begin{lstlisting}[style=inline, caption={Instalação via CLI}]
+hay install sheep-farm/hayplot
+\end{lstlisting}
+
+O binário pré-compilado para a sua plataforma é baixado automaticamente
+da última \textit{GitHub Release}. Para verificar se a instalação ocorreu com sucesso:
+
+\begin{lstlisting}[style=inline, caption={Verificação da instalação}]
+hay list
+\end{lstlisting}
+
+Você deve ver \code{sheep-farm/hayplot (native so plugin)} na lista de pacotes
+instalados.
+
+Para atualizar para a versão mais recente:
+
+\begin{lstlisting}[style=inline, caption={Atualização}]
+hay update sheep-farm/hayplot
+\end{lstlisting}
+
+Para verificar a integridade do que está instalado:
+
+\begin{lstlisting}[style=inline, caption={Verificação de integridade}]
+hay check-plugin sheep-farm/hayplot
+\end{lstlisting}
+
+Para remover o plugin:
+
+\begin{lstlisting}[style=inline, caption={Remoção}]
+hay remove sheep-farm/hayplot
+\end{lstlisting}
+
+\section{Importando o Plugin}
+\index{import}
+
+Em qualquer script \code{.hay}, importe o plugin com um alias:
+
+\begin{lstlisting}[caption={Importação com alias}]
+import("sheep-farm/hayplot", as=gg)
+\end{lstlisting}
+
+A partir daí, todas as funções são acessadas com o prefixo \code{gg::}.
+
+% ============================================================
+\chapter{Referência das Funções}
+\index{funções}
+% ============================================================
+
+\hayplot{} expõe quatro funções públicas. Cada uma recebe e retorna um
+dicionário de especificação de plot (\textit{plot spec}), tornando a
+composição via pipe natural e segura.
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{hayplot(df, aes)} --- Inicialização}
+\index{hayplot()}
+% ────────────────────────────────────────────────────────────
+
+Inicializa um novo dicionário de especificação de plot com os dados e o
+mapeamento estético.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+hayplot(df: DataFrame, aes: Dict) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{df}  & \code{DataFrame} & O DataFrame contendo as colunas a serem plotadas. \\[4pt]
+  \code{aes} & \code{Dict}      & Mapeamento estético. Deve conter as chaves
+                                  \code{"x"} e \code{"y"} com os nomes das colunas. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+Um \code{Dict} com a estrutura interna da especificação de plot:
+
+\begin{lstlisting}[style=inline]
+{
+  "data":    <Arrow DataFrame>,
+  "mapping": {"x": "coluna_x", "y": "coluna_y"},
+  "layers":  [],
+  "labs":    {}
+}
+\end{lstlisting}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Criando a especificação inicial}]
+let df = dataframe({"pib": [10, 20, 30], "vida": [70, 75, 80]})
+
+let spec = gg::hayplot(df, {"x": "pib", "y": "vida"})
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_point(plot, color, size)} --- Camada de Pontos}
+\index{geom\_point()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma camada de dispersão (\textit{scatter plot}) à especificação.
+Cada observação do DataFrame será representada por um círculo.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_point(plot: Dict, color: String, size: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}  & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color} & \code{String} & Cor dos pontos. Valores aceitos: \code{"red"}, \code{"blue"},
+                                 \code{"green"}, \code{"yellow"}, \code{"magenta"},
+                                 \code{"cyan"}, \code{"black"}. Padrão: \code{"blue"}. \\[4pt]
+  \code{size}  & \code{Float}  & Raio dos pontos em pixels. Valores recomendados: 4.0--12.0. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} da especificação com a camada de pontos adicionada ao
+campo \code{"layers"}.
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Adicionando uma camada de dispersão}]
+let spec = gg::hayplot(df, {"x": "pib", "y": "vida"})
+           |> gg::geom_point("red", 8.0)
+\end{lstlisting}
+
+\begin{warnbox}[title={\textbf{Atenção:} Nota sobre cores}]
+  O nome da cor deve ser passado em inglês e minúsculas. Qualquer cor
+  não reconhecida resultará na cor padrão \code{"blue"}.
+  O suporte a cores hexadecimais (\code{\#RRGGBB}) está previsto para versões futuras.
+\end{warnbox}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{labs(plot, title, x, y)} --- Rótulos}
+\index{labs()}
+% ────────────────────────────────────────────────────────────
+
+Define o título do gráfico e os rótulos dos eixos horizontal e vertical.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+labs(plot: Dict, title: String, x: String, y: String) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}  & \code{Dict}   & A especificação de plot. \\[4pt]
+  \code{title} & \code{String} & Título exibido no topo do gráfico. \\[4pt]
+  \code{x}     & \code{String} & Rótulo do eixo horizontal. \\[4pt]
+  \code{y}     & \code{String} & Rótulo do eixo vertical. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} com o campo \code{"labs"} preenchido.
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Definindo título e nomes dos eixos}]
+let spec = gg::hayplot(df, {"x": "pib", "y": "vida"})
+           |> gg::geom_point("blue", 6.0)
+           |> gg::labs("PIB vs. Expectativa de Vida",
+                       "PIB per Capita (USD)",
+                       "Expectativa de Vida (anos)")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{render\_svg(plot)} --- Renderização}
+\index{render\_svg()}
+% ────────────────────────────────────────────────────────────
+
+Compila a especificação de plot e renderiza o gráfico final como uma
+\textbf{string SVG}. Esta é a única função que acessa os dados do DataFrame
+e executa operações de desenho.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+render_svg(plot: Dict) -> Result<String, String>
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot} & \code{Dict} & A especificação de plot completa (com dados, mapeamento,
+                              camadas e rótulos). \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+\begin{itemize}
+  \item Em caso de sucesso: uma \code{String} contendo o código XML do SVG
+        (800$\times$600 pixels).
+  \item Em caso de erro: uma mensagem de erro descritiva como \code{String}.
+\end{itemize}
+
+\begin{infobox}[title={\textbf{Nota:} Dimensões do SVG}]
+  A saída SVG tem resolução fixa de \textbf{800$\times$600 pixels}. Como é um
+  formato vetorial, pode ser redimensionada sem perda de qualidade em qualquer
+  aplicação ou editor de imagens.
+\end{infobox}
+
+\subsection*{Processo interno de renderização}
+
+Internamente, \code{render\_svg()} executa os seguintes passos:
+
+\begin{enumerate}
+  \item Extrai o ponteiro Arrow do campo \code{"data"} via FFI Zero-Copy;
+  \item Lê o mapeamento \code{"x"} e \code{"y"} e recupera as colunas do DataFrame;
+  \item Calcula os limites automáticos dos eixos com 10\% de margem;
+  \item Itera sobre \code{"layers"} e aplica cada geometria;
+  \item Compila o gráfico para uma string SVG em memória usando \code{plotters}.
+\end{enumerate}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Renderizando e salvando o SVG}]
+let svg_content = gg::render_svg(plot)
+write(svg_content, "saida.svg")
+\end{lstlisting}
+
+% ============================================================
+\chapter{Fluxo de Trabalho}
+% ============================================================
+
+\section{Pipeline Declarativo}
+
+O fluxo típico de um gráfico em \hayplot{} segue a estrutura abaixo:
+
+\begin{lstlisting}[caption={Estrutura geral de um pipeline hayplot}]
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Carregar ou criar os dados
+load "dados.csv" as df
+
+// 2. Inicializar a especificacao com dados e mapeamento
+// 3. Adicionar camadas geometricas
+// 4. Definir rotulos
+let plot = gg::hayplot(df, {"x": "col_x", "y": "col_y"})
+           |> gg::geom_point("blue", 6.0)
+           |> gg::labs("Titulo do Grafico", "Eixo X", "Eixo Y")
+
+// 5. Renderizar e salvar
+let svg = gg::render_svg(plot)
+write(svg, "grafico.svg")
+\end{lstlisting}
+
+\section{Tipos de Colunas Suportados}
+
+A função \code{render\_svg()} aceita colunas numéricas nos seguintes tipos Arrow:
+
+\begin{center}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Tipo Arrow} & \textbf{Tipo Hayashi} \\
+    \midrule
+    \code{Float64}      & \code{float} \\
+    \code{Int64}        & \code{int} \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\begin{warnbox}[title={\textbf{Atenção:} Colunas categóricas}]
+  Colunas do tipo \code{String} ou booleanas \textbf{não} são suportadas como
+  coordenadas $x$ ou $y$. Para variáveis categóricas, encode-as numericamente
+  antes de plotar.
+\end{warnbox}
+
+\section{Valores Ausentes}
+
+Observações com \code{NaN} em qualquer uma das coordenadas são automaticamente
+omitidas da renderização. Não é necessário filtrar os dados antes de plotar.
+
+% ============================================================
+\chapter{Exemplos Completos}
+% ============================================================
+
+\section{Dispersão Simples}
+\index{exemplo!dispersão simples}
+
+O exemplo mais básico: dados criados inline, sem arquivos externos.
+
+\begin{lstlisting}[caption={examples/basic\_scatter.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Criar dataset PIB vs Expectativa de Vida
+let data = {
+    "gdp_per_capita":  [12000, 24000, 35000, 48000, 65000, 85000],
+    "life_expectancy": [68.5,  72.1,  76.4,  79.2,  81.5,  83.1]
+}
+let df = dataframe(data)
+
+// 2. Construir a especificacao do plot
+print("Building basic scatter plot...")
+let plot = gg::hayplot(df, {"x": "gdp_per_capita", "y": "life_expectancy"})
+           |> gg::geom_point("blue", 7.0)
+           |> gg::labs(
+               "GDP vs Life Expectancy",
+               "GDP per Capita (USD)",
+               "Life Expectancy (Years)"
+           )
+
+// 3. Renderizar e salvar
+let svg = gg::render_svg(plot)
+write(svg, "gdp_life_exp.svg")
+print("Plot saved to 'gdp_life_exp.svg'!")
+\end{lstlisting}
+
+\section{Curva de Phillips}
+\index{exemplo!curva de Phillips}
+
+Clássico da macroeconomia: relação negativa entre desemprego e inflação.
+
+\begin{lstlisting}[caption={examples/phillips\_curve.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Dataset macroeconomico simulado
+let data = {
+    "unemployment_rate": [3.5, 4.2, 5.0, 6.1, 7.5, 8.8, 9.5],
+    "inflation_rate":    [5.2, 4.5, 3.8, 2.9, 1.8, 1.2, 0.9]
+}
+let df = dataframe(data)
+
+// 2. Construir o grafico da Curva de Phillips
+print("Building Phillips Curve plot...")
+let plot = gg::hayplot(df, {"x": "unemployment_rate", "y": "inflation_rate"})
+           |> gg::geom_point("red", 8.0)
+           |> gg::labs(
+               "The Phillips Curve",
+               "Unemployment Rate (%)",
+               "Inflation Rate (%)"
+           )
+
+// 3. Renderizar e salvar
+let svg = gg::render_svg(plot)
+write(svg, "phillips_curve.svg")
+print("Plot saved to 'phillips_curve.svg'!")
+\end{lstlisting}
+
+\section{A partir de Arquivo CSV}
+\index{exemplo!CSV}
+
+Integrando \hayplot{} com o comando \code{load} do \hayashi{}:
+
+\begin{lstlisting}[caption={Plot a partir de um arquivo externo}]
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Carregar dados externos
+load "dados_painel.csv" as df
+
+// 2. Criar grafico
+let plot = gg::hayplot(df, {"x": "renda", "y": "consumo"})
+           |> gg::geom_point("green", 5.0)
+           |> gg::labs(
+               "Renda vs. Consumo",
+               "Renda (R$)",
+               "Consumo (R$)"
+           )
+
+// 3. Renderizar
+let svg = gg::render_svg(plot)
+write(svg, "renda_consumo.svg")
+\end{lstlisting}
+
+\section{Combinando com Regressão OLS}
+\index{exemplo!OLS}
+
+\hayplot{} integra-se naturalmente ao workflow econométrico do \hayashi{}.
+O exemplo a seguir estima um modelo OLS e visualiza os valores ajustados
+contra os observados:
+
+\begin{lstlisting}[caption={Visualizando valores ajustados de uma regressão OLS}]
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Carregar dados e estimar OLS
+load "painel.csv" as df
+let m = ols(Y ~ X1 + X2, df)
+
+// 2. Gerar valores preditos
+predict df yhat = m
+
+// 3. Scatter: observado vs predito
+let plot = gg::hayplot(df, {"x": "yhat", "y": "Y"})
+           |> gg::geom_point("blue", 5.0)
+           |> gg::labs(
+               "Observado vs. Ajustado",
+               "Y-hat (valores preditos)",
+               "Y (valores observados)"
+           )
+
+// 4. Salvar
+let svg = gg::render_svg(plot)
+write(svg, "obs_vs_fit.svg")
+\end{lstlisting}
+
+\section{Pipeline Multi-linha}
+\index{exemplo!pipeline multi-linha}
+
+Com o suporte a quebra de linha no operador \code{|>} do \hayashi{}, é
+possível escrever pipelines mais legíveis:
+
+\begin{lstlisting}[caption={Usando quebras de linha na pipeline}]
+import("sheep-farm/hayplot", as=gg)
+
+let df = dataframe({"x": [1.0, 2.0, 3.0, 4.0, 5.0],
+                    "y": [2.5, 4.1, 5.9, 8.2, 10.0]})
+
+let svg = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("cyan", 9.0)
+    |> gg::labs("Tendencia Linear", "Variavel X", "Variavel Y")
+    |> gg::render_svg
+
+write(svg, "tendencia.svg")
+\end{lstlisting}
+
+% ============================================================
+\chapter{Arquitetura Técnica}
+% ============================================================
+
+\section{Comunicação via FFI Arrow}
+
+\hayplot{} é um \textbf{plugin nativo} do \hayashi{}: uma biblioteca dinâmica
+(\code{.so}/\code{.dll}/\code{.dylib}) carregada em tempo de execução.
+A comunicação entre o interpretador e o plugin segue o protocolo de
+FFI do \code{hayashi-plugin-sdk}:
+
+\begin{enumerate}
+  \item O interpretador serializa os argumentos em uma estrutura C-ABI;
+  \item DataFrames são passados como ponteiros Arrow \code{ArrayRef}, sem cópia dos dados;
+  \item O plugin processa em Rust nativo e retorna os valores;
+  \item O interpretador desserializa o retorno e libera a memória via hooks de desalocação.
+\end{enumerate}
+
+\begin{infobox}[title={\textbf{Nota:} Por que Zero-Copy?}]
+  DataFrames econométricos podem ter milhões de linhas. Passar os dados
+  via serialização (JSON, por exemplo) causaria duplicação de memória e
+  \textit{overhead} significativo de CPU. O Arrow FFI resolve isso com um
+  protocolo de ponteiros C padronizado pela Apache Software Foundation.
+\end{infobox}
+
+\section{Dependências}
+
+\begin{center}
+  \begin{tabular}{@{}llL{5cm}@{}}
+    \toprule
+    \textbf{Crate}             & \textbf{Versão} & \textbf{Função} \\
+    \midrule
+    \code{hayashi-plugin-sdk}  & \textit{main}   & FFI ABI, tipos Arrow, macros de exportação \\
+    \code{plotters}            & \code{0.3.7}    & Renderização SVG, primitivas gráficas \\
+    \code{arrow}               & (via SDK)       & Tipos de dados colunares \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\code{plotters} é compilado com \code{default-features = false} e apenas com
+as features \code{svg\_backend}, \code{area\_series} e \code{line\_series},
+eliminando todas as dependências de sistema.
+
+\section{Compilação e Distribuição}
+
+O plugin é compilado como \code{cdylib} (biblioteca C dinâmica):
+
+\begin{lstlisting}[style=inline, caption={Cargo.toml --- tipo de crate}]
+[lib]
+crate-type = ["cdylib"]
+\end{lstlisting}
+
+O binário final é distribuído via \textbf{GitHub Releases} com CI/CD automático.
+O \hayashi{} baixa automaticamente o artefato correto para a arquitetura alvo:
+
+\begin{center}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Plataforma}      & \textbf{Arquivo} \\
+    \midrule
+    Linux x86\_64            & \code{hayplot-x86\_64-unknown-linux-gnu.so} \\
+    macOS aarch64            & \code{hayplot-aarch64-apple-darwin.dylib} \\
+    Windows x86\_64          & \code{hayplot-x86\_64-pc-windows-msvc.dll} \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+% ============================================================
+\chapter{Guia de Contribuição}
+% ============================================================
+
+\section{Configurando o Ambiente}
+
+\begin{lstlisting}[style=inline, caption={Clonar e compilar localmente}]
+git clone https://github.com/sheep-farm/hayplot.git
+cd hayplot
+cargo build
+\end{lstlisting}
+
+Para compilar em modo de lançamento (otimizado):
+
+\begin{lstlisting}[style=inline]
+cargo build --release
+\end{lstlisting}
+
+O arquivo \code{.so} estará em \code{target/release/libhayplot.so}.
+
+\section{Testando com o Hayashi Local}
+
+Para usar a versão local do plugin (sem instalar pelo CLI):
+
+\begin{lstlisting}[caption={Carregando o .so compilado localmente}]
+import("./target/debug/libhayplot.so", as=gg)
+\end{lstlisting}
+
+\begin{warnbox}[title={\textbf{Atenção}}]
+  O caminho com \code{./target/debug/} é adequado apenas para desenvolvimento.
+  Em produção, use sempre \code{import("sheep-farm/hayplot", as=gg)} para
+  carregar a versão instalada via \code{hay install}.
+\end{warnbox}
+
+
+\section{Adicionando Novas Geometrias}
+
+O padrão para adicionar uma nova geometria (e.g., \code{geom\_line}) é:
+
+\begin{enumerate}
+  \item Criar uma função pública anotada com \code{\#[hayashi\_fn]};
+  \item A função recebe \code{mut plot: HashMap<String, HayashiValue>};
+  \item Adiciona uma entrada ao vetor \code{"layers"} com a chave \code{"geom"};
+  \item Retorna o \code{plot} modificado.
+\end{enumerate}
+
+\begin{lstlisting}[caption={Estrutura de uma nova geometria em Rust}]
+#[hayashi_fn]
+pub fn geom_line(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    width: f64,
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(),  HayashiValue::Str("line".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("width".to_string(), HayashiValue::Float(width));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+\end{lstlisting}
+
+Em seguida, adicione o tratamento correspondente dentro de \code{render\_svg()}
+no loop de layers.
+
+% ============================================================
+\chapter{Roadmap}
+% ============================================================
+
+\begin{center}
+  \rowcolors{2}{haylight}{white}
+  \begin{tabularx}{\textwidth}{@{}lXl@{}}
+    \toprule
+    \textbf{Versão} & \textbf{Feature}                                           & \textbf{Status} \\
+    \midrule
+    v0.1.x & \code{geom\_point} --- dispers\~{a}o                                  & $\checkmark$ Conclu\'{i}do \\
+    v0.2.0 & \code{geom\_line} --- séries temporais e tendência                 & Planejado \\
+    v0.2.0 & \code{geom\_bar} --- barras verticais                              & Planejado \\
+    v0.2.0 & \code{geom\_histogram} --- histograma                              & Planejado \\
+    v0.3.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & Planejado \\
+    v0.3.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & Planejado \\
+    v0.3.0 & \code{facet\_wrap} --- painéis por grupo                           & Planejado \\
+    v0.4.0 & Saída PNG (via feature \code{png\_backend})                        & Futuro \\
+    v0.4.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
+    v0.5.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
+    \bottomrule
+  \end{tabularx}
+\end{center}
+
+% ============================================================
+\chapter{Referência Rápida}
+% ============================================================
+
+\begin{center}
+  \rowcolors{2}{haylight}{white}
+  \begin{tabularx}{\textwidth}{@{}L{4.8cm}L{4.0cm}X@{}}
+    \toprule
+    \textbf{Função} & \textbf{Entrada} & \textbf{Descrição} \\
+    \midrule
+    \code{hayplot(df, aes)}                        & \code{DataFrame, Dict}              & Inicializa a spec com dados e mapeamento $x/y$ \\[3pt]
+    \code{geom\_point(plot, color, size)}          & \code{Dict, String, Float}          & Adiciona camada de dispersão \\[3pt]
+    \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
+    \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
+    \bottomrule
+  \end{tabularx}
+\end{center}
+
+\bigskip
+
+\noindent\textbf{Cores disponíveis em \code{geom\_point()}:}
+
+\begin{center}
+  \begin{tabular}{@{}llll@{}}
+    \code{"red"}     & \code{"blue"}    & \code{"green"}   & \code{"yellow"} \\
+    \code{"magenta"} & \code{"cyan"}    & \code{"black"}   & \\
+  \end{tabular}
+\end{center}
+
+\bigskip
+
+\noindent\textbf{Pipeline mínimo funcional:}
+
+\begin{lstlisting}[caption={Menor script completo}]
+import("sheep-farm/hayplot", as=gg)
+
+let df = dataframe({"x": [1.0, 2.0, 3.0], "y": [2.0, 4.0, 6.0]})
+let svg = gg::hayplot(df, {"x": "x", "y": "y"})
+          |> gg::geom_point("blue", 6.0)
+          |> gg::render_svg
+write(svg, "out.svg")
+\end{lstlisting}
+
+% ── Índice remissivo ─────────────────────────────────────────────────────────
+\clearpage
+\printindex
+
+\end{document}

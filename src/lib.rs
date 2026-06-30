@@ -4,7 +4,6 @@ use hayashi_plugin_sdk::arrow::datatypes::DataType;
 use hayashi_plugin_sdk::value::{HayashiValue, FromHayashi, IntoHayashi};
 use plotters::prelude::*;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 // Exposes dynamic library C ABI deallocation hooks
 hayashi_plugin!();
@@ -41,6 +40,25 @@ pub fn geom_point(
     }
     plot
 }
+
+/// 3. geom_line(plot, color, size)
+/// Appends a line plot geometry layer to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_line(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("line".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
 
 /// 3. labs(plot, title, x, y)
 /// Adds plot title and custom axis labels to the plot spec dictionary.
@@ -165,31 +183,7 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
         }
     }
     
-    // 5. Parse layers for point geom settings
-    let mut point_color = "blue".to_string();
-    let mut point_size = 4.0;
-    
-    if let Some(HayashiValue::List(layers)) = plot.get("layers") {
-        for layer_val in layers {
-            if let HayashiValue::Dict(layer) = layer_val {
-                if let Some(HayashiValue::Str(geom)) = layer.get("geom") {
-                    if geom == "point" {
-                        if let Some(HayashiValue::Str(c)) = layer.get("color") {
-                            point_color = c.clone();
-                        }
-                        if let Some(HayashiValue::Float(s)) = layer.get("size") {
-                            point_size = *s;
-                        }
-                        if let Some(HayashiValue::Int(s)) = layer.get("size") {
-                            point_size = *s as f64;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // 6. Compute range limits
+    // 5. Compute range limits
     let x_min = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
     let x_max = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
     let y_min = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
@@ -201,7 +195,7 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
     let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
     let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
     
-    // 7. Render plot into an in-memory SVG string buffer
+    // 6. Render plot into an in-memory SVG string buffer
     let mut svg_buffer = String::new();
     {
         let root = SVGBackend::with_string(&mut svg_buffer, (800, 600)).into_drawing_area();
@@ -221,13 +215,47 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
             .draw()
             .map_err(|e| e.to_string())?;
             
-        // Draw the point series
-        let style = parse_color(&point_color);
-        chart.draw_series(
-            x_values.iter().zip(y_values.iter())
-                .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                .map(|(&x, &y)| Circle::new((x, y), point_size as i32, style.clone()))
-        ).map_err(|e| e.to_string())?;
+        // Draw layers sequentially
+        if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+            for layer_val in layers {
+                if let HayashiValue::Dict(layer) = layer_val {
+                    if let Some(HayashiValue::Str(geom)) = layer.get("geom") {
+                        let color_name = match layer.get("color") {
+                            Some(HayashiValue::Str(c)) => c.as_str(),
+                            _ => "blue",
+                        };
+                        let size = match layer.get("size") {
+                            Some(HayashiValue::Float(s)) => *s,
+                            Some(HayashiValue::Int(s)) => *s as f64,
+                            _ => 4.0,
+                        };
+                        
+                        match geom.as_str() {
+                            "point" => {
+                                let style = parse_color(color_name);
+                                chart.draw_series(
+                                    x_values.iter().zip(y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| Circle::new((x, y), size as i32, style.clone()))
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            "line" => {
+                                let style = parse_color(color_name).stroke_width(size as u32);
+                                chart.draw_series(
+                                    LineSeries::new(
+                                        x_values.iter().zip(y_values.iter())
+                                            .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                            .map(|(&x, &y)| (x, y)),
+                                        style.clone(),
+                                    )
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
     }
     
     Ok(svg_buffer)
