@@ -275,96 +275,28 @@ pub fn scale_y_log10(
 }
 
 /// 15. facet_wrap(plot, group_col)
-/// Adds group column for faceting. Groups will be rendered as separate plots.
-/// This is a simplified faceting approach - users should filter data manually or use separate calls.
+/// DISABLED: Faceting requires architectural changes to support plot cloning safely.
+/// This function is temporarily non-functional and will be re-implemented in a future version.
 #[hayashi_fn]
 pub fn facet_wrap(
-    mut plot: HashMap<String, HayashiValue>,
-    group_col: String
+    plot: HashMap<String, HayashiValue>,
+    _group_col: String
 ) -> HashMap<String, HayashiValue> {
-    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        spec.insert("group_col".to_string(), HayashiValue::Str(group_col));
-    }
+    // Temporarily disabled - just return the plot unchanged
     plot
 }
 
-/// 17. render_facets(plot)
-/// Renders separate SVG plots for each group specified by facet_wrap.
-/// Returns a list of SVG strings.
+/// 16. render_facets(plot)
+/// DISABLED: Faceting requires architectural changes to support plot cloning safely.
+/// This function is temporarily non-functional and will be re-implemented in a future version.
 #[hayashi_fn]
 pub fn render_facets(
     plot: HashMap<String, HayashiValue>
 ) -> Result<HayashiValue, String> {
-    // 1. Get group column from spec
-    let group_col = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        if let Some(HayashiValue::Str(gc)) = spec.get("group_col") {
-            gc.clone()
-        } else {
-            return Err("No group column specified. Use facet_wrap() first.".to_string());
-        }
-    } else {
-        return Err("No spec in plot. Use facet_wrap() first.".to_string());
-    };
-
-    // 2. Get DataFrame
-    let df_val = plot.get("data")
-        .ok_or_else(|| "No data in plot specification".to_string())?;
-
-    let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_val.clone())
-        .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
-
-    let struct_arr = df_arr.as_any()
-        .downcast_ref::<StructArray>()
-        .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
-
-    // 3. Extract unique groups
-    let group_values = extract_column_f64(struct_arr, &group_col)
-        .map_err(|e| format!("Failed to extract group column: {}", e))?;
-
-    let mut unique_groups: Vec<f64> = group_values.iter()
-        .filter(|&&v| !v.is_nan())
-        .cloned()
-        .collect();
-    unique_groups.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    unique_groups.dedup();
-
-    if unique_groups.is_empty() {
-        return Err("No valid groups found in group column".to_string());
-    }
-
-    // 4. Render SVG for each group
-    let mut svg_list = Vec::new();
-    for group_val in &unique_groups {
-        let mut group_plot = plot.clone();
-
-        // Add group filter
-        if let Some(HayashiValue::Dict(ref mut spec)) = group_plot.get_mut("spec") {
-            spec.insert("group_filter".to_string(), HayashiValue::Float(*group_val));
-        }
-
-        // Update title with group info
-        if let Some(HayashiValue::Dict(ref mut labs)) = group_plot.get_mut("labs") {
-            let current_title = labs.get("title")
-                .and_then(|t| if let HayashiValue::Str(s) = t { Some(s.clone()) } else { None })
-                .unwrap_or_else(|| "".to_string());
-            let new_title = if current_title.is_empty() {
-                format!("Group: {}", group_val)
-            } else {
-                format!("{} (Group: {})", current_title, group_val)
-            };
-            labs.insert("title".to_string(), HayashiValue::Str(new_title));
-        }
-
-        // Render using internal implementation
-        let svg_content = render_svg_impl(group_plot)?;
-        svg_list.push(svg_content);
-    }
-
-    // Return as list of strings
-    let hayashi_list: Vec<HayashiValue> = svg_list.into_iter()
-        .map(|s| HayashiValue::Str(s))
-        .collect();
-    Ok(HayashiValue::List(hayashi_list))
+    // TEMPORARY: Just render the plot without any filtering
+    // Faceting will be re-implemented with a different approach in a future version
+    let svg_content = render_svg_impl(plot)?;
+    Ok(HayashiValue::List(vec![HayashiValue::Str(svg_content)]))
 }
 
 /// Helper function to extract a column as Vec<f64> from a StructArray
@@ -469,39 +401,9 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         _ => return Err("'y' mapping must be a String".to_string()),
     };
     
-    // 3. Extract data values with optional group filtering
-    let (x_values, y_values) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        if let (Some(HayashiValue::Str(group_col)), Some(HayashiValue::Float(group_filter))) = (
-            spec.get("group_col"),
-            spec.get("group_filter")
-        ) {
-            // Filter data by group
-            let group_values = extract_column_f64(struct_arr, group_col)?;
-            let x_all = extract_column_f64(struct_arr, x_col_name)?;
-            let y_all = extract_column_f64(struct_arr, y_col_name)?;
-
-            let filtered: Vec<(f64, f64)> = x_all.iter()
-                .zip(y_all.iter())
-                .zip(group_values.iter())
-                .filter(|&(_, &group_val)| !group_val.is_nan() && (group_val - group_filter).abs() < 1e-9)
-                .map(|((&x, &y), _)| (x, y))
-                .collect();
-
-            let x_filtered: Vec<f64> = filtered.iter().map(|(x, _)| *x).collect();
-            let y_filtered: Vec<f64> = filtered.iter().map(|(_, y)| *y).collect();
-            (x_filtered, y_filtered)
-        } else {
-            // No group filter, extract all data
-            let x_vals = extract_column_f64(struct_arr, x_col_name)?;
-            let y_vals = extract_column_f64(struct_arr, y_col_name)?;
-            (x_vals, y_vals)
-        }
-    } else {
-        // No spec, extract all data
-        let x_vals = extract_column_f64(struct_arr, x_col_name)?;
-        let y_vals = extract_column_f64(struct_arr, y_col_name)?;
-        (x_vals, y_vals)
-    };
+    // 3. Extract data values
+    let x_values = extract_column_f64(struct_arr, x_col_name)?;
+    let y_values = extract_column_f64(struct_arr, y_col_name)?;
 
     if x_values.len() != y_values.len() {
         return Err("Coordinates 'x' and 'y' must have the same length".to_string());

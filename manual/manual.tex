@@ -137,7 +137,7 @@
 \newcommand{\hayplot}{\textbf{hayplot}}
 
 % ── Metadados da versão ─────────────────────────────────────────────────────
-\newcommand{\hayversiontag}{v0.7.0}
+\newcommand{\hayversiontag}{v0.7.1}
 \newcommand{\hayashiversiontag}{0.2.6}
 
 % ============================================================
@@ -877,90 +877,6 @@ let plot = gg::hayplot(df, {"x": "tempo", "y": "valor"})
 \end{tipbox}
 
 % ─────────────────────────────────────────────────────────---
-\section{\texttt{facet\_wrap(plot, group\_col)} --- Faceting por Grupo}
-\index{facet\_wrap()}
-% ─────────────────────────────────────────────────────────---
-
-Especifica uma coluna para faceting. Quando usado com \code{render\_facets()}, gera
-múltiplos gráficos SVG separados, um para cada valor único na coluna de grupo.
-Esta é uma abordagem simplificada de faceting — painéis combinados em um único SVG
-não são suportados; cada grupo gera seu próprio arquivo SVG.
-
-\subsection*{Assinatura}
-
-\begin{lstlisting}[style=inline]
-facet_wrap(plot: Dict, group_col: String) -> Dict
-\end{lstlisting}
-
-\subsection*{Parâmetros}
-
-\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
-  \toprule
-  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
-  \midrule
-  \code{plot}      & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
-  \code{group\_col} & \code{String} & Nome da coluna numérica usada para agrupar os dados. \\
-  \bottomrule
-\end{tabularx}
-
-\subsection*{Exemplo}
-
-\begin{lstlisting}[caption={Faceting por grupo}]
-let plot = gg::hayplot(df, {"x": "tempo", "y": "valor"})
-           |> gg::facet_wrap("categoria")
-           |> gg::geom_point("blue", 5.0)
-           |> gg::labs("Dados por Categoria", "Tempo", "Valor")
-\end{lstlisting}
-
-% ─────────────────────────────────────────────────────────---
-\section{\texttt{render\_facets(plot)} --- Renderizar Painéis}
-\index{render\_facets()}
-% ─────────────────────────────────────────────────────────---
-
-Renderiza múltiplos gráficos SVG separados, um para cada grupo especificado por \code{facet\_wrap()}.
-Retorna uma lista de strings SVG. O usuário deve salvar cada SVG em arquivos separados.
-
-\subsection*{Assinatura}
-
-\begin{lstlisting}[style=inline]
-render_facets(plot: Dict) -> Result<List<String>, String>
-\end{lstlisting}
-
-\subsection*{Parâmetros}
-
-\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
-  \toprule
-  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
-  \midrule
-  \code{plot} & \code{Dict} & A especificação de plot com \code{facet\_wrap()} aplicado. \\
-  \bottomrule
-\end{tabularx}
-
-\subsection*{Retorno}
-
-Uma lista (\code{List<String>}) contendo as strings SVG para cada grupo, ordenadas pelo valor do grupo.
-
-\subsection*{Exemplo}
-
-\begin{lstlisting}[caption={Renderizar e salvar painéis faceted}]
-let plot = gg::hayplot(df, {"x": "tempo", "y": "valor"})
-           |> gg::facet_wrap("categoria")
-           |> gg::geom_point("blue", 5.0)
-           |> gg::labs("Dados por Categoria", "Tempo", "Valor")
-
-let svg_list = gg::render_facets(plot)
-// svg_list[0] contém SVG para grupo 1
-// svg_list[1] contém SVG para grupo 2
-// ...
-\end{lstlisting}
-
-\begin{tipbox}[title={\textbf{Nota:} Faceting simplificado}]
-  Esta implementação gera arquivos SVG separados em vez de painéis combinados.
-  Para visualizar todos os grupos simultaneamente, abra os SVGs gerados em tabs do navegador
-  ou use ferramentas externas para combinar as imagens.
-\end{tipbox}
-
-% ─────────────────────────────────────────────────────────---
 
 % ────────────────────────────────────────────────────────────
 \section{\texttt{labs(plot, title, x, y)} --- Rótulos}
@@ -1470,31 +1386,6 @@ write(svg_content, "log_scale.svg")
 print("Plot saved to 'log_scale.svg'!")
 \end{lstlisting}
 
-\section{Faceting por Grupo}
-\index{exemplo!faceting}
-
-Visualização de dados agrupados com gráficos separados:
-
-\begin{lstlisting}[caption={examples/facet\_wrap.hay}]
-import("sheep-farm/hayplot", as=gg)
-
-// Dados com grupos
-let data = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0],
-            "y": [10.0, 20.0, 30.0, 15.0, 25.0, 35.0, 12.0, 22.0, 32.0],
-            "group": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0]}
-let df = dataframe(data)
-
-let plot = gg::hayplot(df, {"x": "x", "y": "y"})
-    |> gg::facet_wrap("group")
-    |> gg::geom_point("blue", 5.0)
-    |> gg::geom_line("red", 2.0)
-    |> gg::labs("Grouped Data", "X", "Y")
-
-let svg_list = gg::render_facets(plot)
-// svg_list contains SVG strings for each group
-print("Generated " + svg_list.length + " facet plots")
-\end{lstlisting}
-
 % ============================================================
 \chapter{Arquitetura Técnica}
 % ============================================================
@@ -1652,7 +1543,7 @@ no loop de layers.
     v0.5.0 & \code{geom\_step} --- linhas em degrau                              & $\checkmark$ Conclu\'{i}do \\
     v0.6.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & $\checkmark$ Conclu\'{i}do \\
     v0.6.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & $\checkmark$ Conclu\'{i}do \\
-    v0.7.0 & \code{facet\_wrap}, \code{render\_facets} --- painéis por grupo  & $\checkmark$ Conclu\'{i}do \\
+    v0.7.1 & \code{facet\_wrap}, \code{render\_facets} --- painéis por grupo  & $\times$ Desabilitado (arquitetura) \\
     v0.8.0 & Saída PNG (via feature \code{png\_backend})                        & Planejado \\
     v0.8.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
     v0.8.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
@@ -1685,13 +1576,18 @@ no loop de layers.
     \code{geom\_step(plot, color, size, dir)}     & \code{Dict, String, Float, String} & Adiciona linha em degrau (hv/vh) \\[3pt]
     \code{scale\_x\_log10(plot)}                   & \code{Dict}                         & Define eixo X para escala logarítmica base 10 \\[3pt]
     \code{scale\_y\_log10(plot)}                   & \code{Dict}                         & Define eixo Y para escala logarítmica base 10 \\[3pt]
-    \code{facet\_wrap(plot, group\_col)}            & \code{Dict, String}                 & Especifica coluna para agrupamento \\[3pt]
-    \code{render\_facets(plot)}                   & \code{Dict}                         & Renderiza SVGs separados por grupo \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule
   \end{tabularx}
 \end{center}
+
+\bigskip
+
+\begin{alertbox}[title={\textbf{Nota:} Faceting desabilitado}]
+  As funções \code{facet\_wrap} e \code{render\_facets} foram desabilitadas na v0.7.1 devido a limitações arquiteturais.
+  Elas serão reimplementadas em uma versão futura com uma abordagem diferente.
+\end{alertbox}
 
 \bigskip
 
