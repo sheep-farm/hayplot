@@ -2226,23 +2226,37 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     };
     
     let legend_svg = if show_legend && x_series.len() > 1 {
-        // Simple legend rendering in top-right corner
-        let legend_x = width as i32 - 150;
-        let legend_y = 80;
-        let legend_box_y = legend_y - 10;
-        let legend_box_height = (x_series.len() * 25) as i32 + 20;
+        // Dynamic legend rendering with calculated dimensions
+        let char_width = 7.0; // approximate pixels per character
+        let line_height = 20.0; // pixels per legend item
+        let box_padding = 10.0; // padding inside legend box
+        let text_offset = 2.0; // vertical offset for text baseline
+        
+        // Calculate max series name width
+        let max_name_width = x_series.iter()
+            .map(|name| name.len() as f64 * char_width)
+            .fold(0.0f64, |a, b| a.max(b));
+        
+        // Calculate legend dimensions
+        let box_width = (max_name_width + 35.0 + 15.0).ceil() as i32; // text + margin + color box
+        let box_height = (x_series.len() as f64 * line_height + box_padding * 2.0).ceil() as i32;
+        
+        let legend_box_x = width as i32 - box_width - 20; // 20px right margin
+        let legend_box_y = 60; // Top margin
         
         let mut legend_html = String::new();
         
         // Draw legend background box
         legend_html.push_str(&format!(
-            "<rect x=\"{}\" y=\"{}\" width=\"140\" height=\"{}\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" opacity=\"0.9\"/>\n",
-            legend_x, legend_box_y, legend_box_height
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" opacity=\"0.9\"/>\n",
+            legend_box_x, legend_box_y, box_width, box_height
         ));
         
-        // Draw legend items
+        // Draw legend items with dynamic positioning
+        let start_y = legend_box_y as f64 + box_padding;
+        
         for (idx, series_name) in x_series.iter().enumerate() {
-            let item_y = legend_y + (idx * 25) as i32;
+            let item_y = start_y + (idx as f64 * line_height);
             
             // Get color for this series
             let series_color = if let Some(ref configs) = series_config {
@@ -2262,16 +2276,18 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                     get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
             };
             
-            // Draw color box
+            // Draw color box (centered vertically in line)
+            let color_box_y = item_y - 7.5; // center 15px box in 20px line
             legend_html.push_str(&format!(
                 "<rect x=\"{}\" y=\"{}\" width=\"15\" height=\"15\" fill=\"{}\" stroke=\"black\" stroke-width=\"1\"/>\n",
-                legend_x + 10, item_y - 12, series_color
+                legend_box_x + 10, color_box_y, series_color
             ));
             
-            // Draw series name text
+            // Draw series name text (vertically centered with color box)
+            let text_y = item_y + text_offset;
             legend_html.push_str(&format!(
                 "<text x=\"{}\" y=\"{}\" font-family=\"sans-serif\" font-size=\"12\" fill=\"black\">{}</text>\n",
-                legend_x + 35, item_y, series_name
+                legend_box_x + 35, text_y, series_name
             ));
         }
         

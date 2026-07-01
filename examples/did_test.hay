@@ -5,16 +5,16 @@ import("sheep-farm/hayplot" as= gg)
 
 // Criar dados simples com duas colunas x e uma coluna y
 let data = {
-    "x1": [1.0, 2.0, 3.0, 4.0, 5.0],
-    "x2": [1.5, 2.5, 3.5, 4.5, 5.5],
+    "series_control_group_A": [1.0, 2.0, 3.0, 4.0, 5.0],
+    "series_treatment_group_B": [1.5, 2.5, 3.5, 4.5, 5.5],
     "y": [10.0, 20.0, 30.0, 40.0, 50.0]
 }
 
 let df = dataframe(data)
 
 // Plot com múltiplas séries x, cores customizadas e legenda
-let plot = gg :: hayplot (df , {"x": "x1,x2", "y": "y"})
-    |> gg :: set_series_config ({"x1": {"color": "blue", "size": 2.0}, "x2": {"color": "red", "size": 4.0}})
+let plot = gg :: hayplot (df , {"x": "series_control_group_A,series_treatment_group_B", "y": "y"})
+    |> gg :: set_series_config ({"series_control_group_A": {"color": "blue", "size": 2.0}, "series_treatment_group_B": {"color": "red", "size": 4.0}})
     |> gg :: geom_line ("auto", 2.0)
     |> gg :: geom_point ("auto", 3.0)
     |> gg :: show_legend ()
