@@ -16,7 +16,7 @@ mod utils;
 mod math;
 
 // Re-export utilities for internal use
-pub use utils::{extract_column_f64, filter_array_by_mask, parse_color, parse_color_to_rgb, get_series_color};
+pub use utils::{extract_column_f64, extract_column_string, unique_strings, filter_struct_by_mask, filter_array_by_mask, parse_color, parse_color_to_rgb, get_series_color};
 pub use math::{catmull_rom_spline, linear_regression, linear_regression_se};
 
 /// 1. hayplot(df, aes)
@@ -725,24 +725,58 @@ pub fn theme_element_text(
     plot
 }
 
-/// 29. facet_wrap(plot, group_col)
-/// DEPRECATED: Use filter_data() instead. This function is kept for compatibility but does nothing.
+/// 29. facet_wrap(plot, facet_col, ncol, scales)
+/// Creates a wrapped faceted plot: splits the data by the unique values of
+/// `facet_col` and arranges the sub-plots in a grid with `ncol` columns.
+/// scales: "fixed" (shared axes, default), "free_x", "free_y", or "free" (both)
 #[hayashi_fn]
 pub fn facet_wrap(
-    plot: HashMap<String, HayashiValue>,
-    _group_col: String
+    mut plot: HashMap<String, HayashiValue>,
+    facet_col: String,
+    ncol: i64,
+    scales: String
 ) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("facet_type".to_string(), HayashiValue::Str("wrap".to_string()));
+        spec.insert("facet_col".to_string(), HayashiValue::Str(facet_col));
+        spec.insert("facet_ncol".to_string(), HayashiValue::Int(ncol));
+        spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
+    } else {
+        let mut spec = HashMap::new();
+        spec.insert("facet_type".to_string(), HayashiValue::Str("wrap".to_string()));
+        spec.insert("facet_col".to_string(), HayashiValue::Str(facet_col));
+        spec.insert("facet_ncol".to_string(), HayashiValue::Int(ncol));
+        spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
+        plot.insert("spec".to_string(), HayashiValue::Dict(spec));
+    }
     plot
 }
 
-/// 30. render_facets(plot)
-/// DEPRECATED: Use filter_data() + manual hayplot calls instead. This function renders a single plot.
+/// 30. facet_grid(plot, rows_col, cols_col, scales)
+/// Creates a 2D grid of sub-plots: rows are split by `rows_col` unique values,
+/// columns by `cols_col` unique values.
+/// scales: "fixed" (shared axes, default), "free_x", "free_y", or "free" (both)
 #[hayashi_fn]
-pub fn render_facets(
-    plot: HashMap<String, HayashiValue>
-) -> Result<HayashiValue, String> {
-    let svg_content = render_svg_impl(plot)?;
-    Ok(HayashiValue::List(vec![HayashiValue::Str(svg_content)]))
+pub fn facet_grid(
+    mut plot: HashMap<String, HayashiValue>,
+    rows_col: String,
+    cols_col: String,
+    scales: String
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("facet_type".to_string(), HayashiValue::Str("grid".to_string()));
+        spec.insert("facet_rows".to_string(), HayashiValue::Str(rows_col));
+        spec.insert("facet_cols".to_string(), HayashiValue::Str(cols_col));
+        spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
+    } else {
+        let mut spec = HashMap::new();
+        spec.insert("facet_type".to_string(), HayashiValue::Str("grid".to_string()));
+        spec.insert("facet_rows".to_string(), HayashiValue::Str(rows_col));
+        spec.insert("facet_cols".to_string(), HayashiValue::Str(cols_col));
+        spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
+        plot.insert("spec".to_string(), HayashiValue::Dict(spec));
+    }
+    plot
 }
 
 #[cfg(feature = "png")]
@@ -1109,6 +1143,465 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
 /// Helper function to calculate standard error of regression
 // Moved to math.rs
 
+/// Render a faceted plot (facet_wrap or facet_grid).
+/// Splits the DataFrame by categorical column(s), creates a grid of sub-plots
+/// in a single SVG, each with its own axes and the same layers.
+fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String> {
+    use hayashi_plugin_sdk::arrow::array::StructArray;
+
+    // Extract spec
+    let spec = match plot.get("spec") {
+        Some(HayashiValue::Dict(s)) => s.clone(),
+        _ => return Err("No spec in faceted plot".to_string()),
+    };
+
+    let facet_type = match spec.get("facet_type") {
+        Some(HayashiValue::Str(t)) => t.clone(),
+        _ => return Err("No facet_type in spec".to_string()),
+    };
+
+    let scales_mode = match spec.get("facet_scales") {
+        Some(HayashiValue::Str(s)) => s.clone(),
+        _ => "fixed".to_string(),
+    };
+
+    // Get DataFrame
+    let df_val = plot.get("data")
+        .ok_or_else(|| "No data in faceted plot".to_string())?;
+    let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_val.clone())
+        .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
+    let struct_arr = df_arr.as_any()
+        .downcast_ref::<StructArray>()
+        .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
+
+    // Get mapping
+    let mapping = match plot.get("mapping") {
+        Some(HayashiValue::Dict(m)) => m.clone(),
+        _ => return Err("No mapping in faceted plot".to_string()),
+    };
+    let x_col = match mapping.get("x") {
+        Some(HayashiValue::Str(s)) => s.clone(),
+        _ => return Err("Faceted plot needs 'x' mapping".to_string()),
+    };
+    let y_col = match mapping.get("y") {
+        Some(HayashiValue::Str(s)) => s.clone(),
+        _ => return Err("Faceted plot needs 'y' mapping".to_string()),
+    };
+
+    // Get labs
+    let title = plot.get("labs").and_then(|l| match l {
+        HayashiValue::Dict(d) => d.get("title").and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.clone()),
+            _ => None,
+        }),
+        _ => None,
+    }).unwrap_or_default();
+    let x_label = plot.get("labs").and_then(|l| match l {
+        HayashiValue::Dict(d) => d.get("x").and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.clone()),
+            _ => None,
+        }),
+        _ => None,
+    }).unwrap_or_else(|| x_col.clone());
+    let y_label = plot.get("labs").and_then(|l| match l {
+        HayashiValue::Dict(d) => d.get("y").and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.clone()),
+            _ => None,
+        }),
+        _ => None,
+    }).unwrap_or_else(|| y_col.clone());
+
+    // Dimensions
+    let (width, height) = {
+        let w = spec.get("width").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(800);
+        let h = spec.get("height").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(600);
+        (w, h)
+    };
+
+    let bg_color = spec.get("background_color").and_then(|v| match v {
+        HayashiValue::Str(s) => Some(s.clone()),
+        _ => None,
+    }).unwrap_or_else(|| "white".to_string());
+
+    let show_grid = spec.get("show_grid").and_then(|v| match v {
+        HayashiValue::Bool(b) => Some(*b),
+        _ => None,
+    }).unwrap_or(true);
+
+    // Determine facet groups
+    let (panel_labels, n_rows, n_cols, _row_labels, _col_labels) = if facet_type == "wrap" {
+        let facet_col = match spec.get("facet_col") {
+            Some(HayashiValue::Str(s)) => s.clone(),
+            _ => return Err("facet_wrap requires facet_col".to_string()),
+        };
+        let ncol = spec.get("facet_ncol").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as usize),
+            _ => None,
+        }).unwrap_or(2);
+
+        let facet_values = extract_column_string(struct_arr, &facet_col)?;
+        let groups = unique_strings(&facet_values);
+        let n_groups = groups.len();
+        if n_groups == 0 {
+            return Err("facet_wrap: no groups found in facet column".to_string());
+        }
+        let nrows = (n_groups + ncol - 1) / ncol;
+        // Panel labels in row-major order
+        let labels: Vec<String> = groups.clone();
+        (labels, nrows, ncol, Vec::new(), Vec::new())
+    } else {
+        // facet_grid
+        let rows_col = match spec.get("facet_rows") {
+            Some(HayashiValue::Str(s)) => s.clone(),
+            _ => return Err("facet_grid requires rows_col".to_string()),
+        };
+        let cols_col = match spec.get("facet_cols") {
+            Some(HayashiValue::Str(s)) => s.clone(),
+            _ => return Err("facet_grid requires cols_col".to_string()),
+        };
+
+        let row_values = extract_column_string(struct_arr, &rows_col)?;
+        let col_values = extract_column_string(struct_arr, &cols_col)?;
+        let row_groups = unique_strings(&row_values);
+        let col_groups = unique_strings(&col_values);
+
+        if row_groups.is_empty() || col_groups.is_empty() {
+            return Err("facet_grid: no groups found in row/col columns".to_string());
+        }
+
+        let nrows = row_groups.len();
+        let ncols = col_groups.len();
+
+        // Panel labels in row-major order: for each row, for each col
+        let mut labels = Vec::new();
+        for r in &row_groups {
+            for c in &col_groups {
+                labels.push(format!("{}:{}", r, c));
+            }
+        }
+        (labels, nrows, ncols, row_groups, col_groups)
+    };
+
+    // Extract all x and y data for computing global ranges (when scales=fixed)
+    let x_series: Vec<String> = if x_col.contains(',') {
+        x_col.split(',').map(|s| s.trim().to_string()).collect()
+    } else {
+        vec![x_col.clone()]
+    };
+
+    // Compute per-panel data
+    // For each panel, filter the struct array and extract x/y values
+    struct PanelData {
+        label: String,
+        x_values: Vec<Vec<f64>>,
+        y_values: Vec<f64>,
+    }
+
+    let mut panels: Vec<PanelData> = Vec::new();
+
+    for label in &panel_labels {
+        // Build mask for this panel
+        let mask: Vec<bool> = if facet_type == "wrap" {
+            let facet_col = match spec.get("facet_col") {
+                Some(HayashiValue::Str(s)) => s.as_str(),
+                _ => return Err("facet_wrap requires facet_col".to_string()),
+            };
+            let facet_values = extract_column_string(struct_arr, facet_col)?;
+            facet_values.iter().map(|v| v == label).collect()
+        } else {
+            // grid: label is "row:col"
+            let parts: Vec<&str> = label.splitn(2, ':').collect();
+            if parts.len() != 2 {
+                return Err(format!("Invalid grid label: {}", label));
+            }
+            let rows_col = match spec.get("facet_rows") {
+                Some(HayashiValue::Str(s)) => s.as_str(),
+                _ => return Err("facet_grid requires rows_col".to_string()),
+            };
+            let cols_col = match spec.get("facet_cols") {
+                Some(HayashiValue::Str(s)) => s.as_str(),
+                _ => return Err("facet_grid requires cols_col".to_string()),
+            };
+            let row_values = extract_column_string(struct_arr, rows_col)?;
+            let col_values = extract_column_string(struct_arr, cols_col)?;
+            row_values.iter().zip(col_values.iter())
+                .map(|(r, c)| r == parts[0] && c == parts[1])
+                .collect()
+        };
+
+        let sub_struct = filter_struct_by_mask(struct_arr, &mask)?;
+
+        let mut x_vals = Vec::new();
+        for xc in &x_series {
+            x_vals.push(extract_column_f64(&sub_struct, xc)?);
+        }
+        let y_vals = extract_column_f64(&sub_struct, &y_col)?;
+
+        panels.push(PanelData {
+            label: label.clone(),
+            x_values: x_vals,
+            y_values: y_vals,
+        });
+    }
+
+    // Compute global ranges (for fixed scales) or per-panel ranges (for free)
+    let free_x = scales_mode == "free_x" || scales_mode == "free";
+    let free_y = scales_mode == "free_y" || scales_mode == "free";
+
+    // Global ranges
+    let (global_x_min, global_x_max, global_y_min, global_y_max) = {
+        let x_min = panels.iter()
+            .flat_map(|p| p.x_values.iter().flat_map(|s| s.iter()))
+            .filter(|&&v| !v.is_nan())
+            .fold(f64::INFINITY, |a, &b| a.min(b));
+        let x_max = panels.iter()
+            .flat_map(|p| p.x_values.iter().flat_map(|s| s.iter()))
+            .filter(|&&v| !v.is_nan())
+            .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let y_min = panels.iter()
+            .flat_map(|p| p.y_values.iter())
+            .filter(|&&v| !v.is_nan())
+            .fold(f64::INFINITY, |a, &b| a.min(b));
+        let y_max = panels.iter()
+            .flat_map(|p| p.y_values.iter())
+            .filter(|&&v| !v.is_nan())
+            .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
+        let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.1 - 1.0 };
+        let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.1 + 1.0 };
+        let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
+        let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
+        (x_min, x_max, y_min, y_max)
+    };
+
+    // Get layers
+    let layers: Vec<HashMap<String, HayashiValue>> = match plot.get("layers") {
+        Some(HayashiValue::List(l)) => l.iter().filter_map(|v| match v {
+            HayashiValue::Dict(d) => Some(d.clone()),
+            _ => None,
+        }).collect(),
+        _ => Vec::new(),
+    };
+
+    // Series config
+    let series_config: Option<HashMap<String, HashMap<String, HayashiValue>>> =
+        plot.get("series_config").and_then(|v| match v {
+            HayashiValue::Dict(d) => {
+                let mut configs = HashMap::new();
+                for (k, val) in d {
+                    if let HayashiValue::Dict(c) = val {
+                        configs.insert(k.clone(), c.clone());
+                    }
+                }
+                Some(configs)
+            }
+            _ => None,
+        });
+
+    // Render
+    let mut svg_buffer = String::new();
+    {
+        let root = SVGBackend::with_string(&mut svg_buffer, (width, height)).into_drawing_area();
+        let bg_rgb = parse_color_to_rgb(&bg_color);
+        root.fill(&bg_rgb).map_err(|e| e.to_string())?;
+
+        // Title area at top
+        let title_area = root.margin(0, 0, 0, 0);
+        let plot_area = if !title.is_empty() {
+            // Split off title area (40px)
+            let (title_da, plot_da) = title_area.split_vertically(40);
+            // Draw title
+            title_da.titled(&title, ("sans-serif", 20).into_font())
+                .map_err(|e| e.to_string())?;
+            plot_da
+        } else {
+            title_area
+        };
+
+        // Split into grid
+        let sub_areas = plot_area.split_evenly((n_rows, n_cols));
+
+        for (idx, panel) in panels.iter().enumerate() {
+            if idx >= sub_areas.len() {
+                break;
+            }
+            let sub = &sub_areas[idx];
+
+            // Determine ranges for this panel
+            let (x_min, x_max) = if free_x {
+                let xmin = panel.x_values.iter()
+                    .flat_map(|s| s.iter())
+                    .filter(|&&v| !v.is_nan())
+                    .fold(f64::INFINITY, |a, &b| a.min(b));
+                let xmax = panel.x_values.iter()
+                    .flat_map(|s| s.iter())
+                    .filter(|&&v| !v.is_nan())
+                    .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                let xmin = if xmin.is_infinite() { 0.0 } else { xmin - (xmax - xmin).abs() * 0.1 - 1.0 };
+                let xmax = if xmax.is_infinite() { 10.0 } else { xmax + (xmax - xmin).abs() * 0.1 + 1.0 };
+                (xmin, xmax)
+            } else {
+                (global_x_min, global_x_max)
+            };
+
+            let (y_min, y_max) = if free_y {
+                let ymin = panel.y_values.iter()
+                    .filter(|&&v| !v.is_nan())
+                    .fold(f64::INFINITY, |a, &b| a.min(b));
+                let ymax = panel.y_values.iter()
+                    .filter(|&&v| !v.is_nan())
+                    .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                let ymin = if ymin.is_infinite() { 0.0 } else { ymin - (ymax - ymin).abs() * 0.1 - 1.0 };
+                let ymax = if ymax.is_infinite() { 10.0 } else { ymax + (ymax - ymin).abs() * 0.1 + 1.0 };
+                (ymin, ymax)
+            } else {
+                (global_y_min, global_y_max)
+            };
+
+            // Add margin within each sub-area for axes
+            let chart_area = sub.margin(10, 25, 10, 10);
+
+            let mut chart = ChartBuilder::on(&chart_area)
+                .caption(panel.label.as_str(), ("sans-serif", 14).into_font())
+                .margin_top(5)
+                .margin_bottom(5)
+                .margin_left(5)
+                .margin_right(5)
+                .x_label_area_size(30)
+                .y_label_area_size(40)
+                .build_cartesian_2d(x_min..x_max, y_min..y_max)
+                .map_err(|e| e.to_string())?;
+
+            if show_grid {
+                chart.configure_mesh()
+                    .x_desc(&x_label)
+                    .y_desc(&y_label)
+                    .label_style(("sans-serif", 10).into_font())
+                    .draw()
+                    .map_err(|e| e.to_string())?;
+            } else {
+                chart.configure_mesh()
+                    .x_desc(&x_label)
+                    .y_desc(&y_label)
+                    .label_style(("sans-serif", 10).into_font())
+                    .disable_x_mesh()
+                    .disable_y_mesh()
+                    .draw()
+                    .map_err(|e| e.to_string())?;
+            }
+
+            // Draw layers for this panel
+            for layer in &layers {
+                let geom = match layer.get("geom") {
+                    Some(HayashiValue::Str(g)) => g.clone(),
+                    _ => continue,
+                };
+                let color_name = match layer.get("color") {
+                    Some(HayashiValue::Str(c)) => c.as_str(),
+                    _ => "blue",
+                };
+                let size = match layer.get("size") {
+                    Some(HayashiValue::Float(s)) => *s,
+                    Some(HayashiValue::Int(s)) => *s as f64,
+                    _ => 4.0,
+                };
+
+                match geom.as_str() {
+                    "point" => {
+                        let use_auto = color_name == "auto" && panel.x_values.len() > 1;
+                        if use_auto {
+                            for (i, x_vals) in panel.x_values.iter().enumerate() {
+                                let sname = &x_series[i];
+                                let color = if let Some(ref configs) = series_config {
+                                    if let Some(ref c) = configs.get(sname) {
+                                        if let Some(HayashiValue::Str(col)) = c.get("color") {
+                                            parse_color(col)
+                                        } else {
+                                            get_series_color(i).filled()
+                                        }
+                                    } else { get_series_color(i).filled() }
+                                } else { get_series_color(i).filled() };
+                                chart.draw_series(
+                                    x_vals.iter().zip(panel.y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| Circle::new((x, y), size as i32, color))
+                                ).map_err(|e| e.to_string())?;
+                            }
+                        } else {
+                            let style = parse_color(color_name);
+                            for x_vals in &panel.x_values {
+                                chart.draw_series(
+                                    x_vals.iter().zip(panel.y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| Circle::new((x, y), size as i32, style.clone()))
+                                ).map_err(|e| e.to_string())?;
+                            }
+                        }
+                    }
+                    "line" => {
+                        let use_auto = color_name == "auto" && panel.x_values.len() > 1;
+                        if use_auto {
+                            for (i, x_vals) in panel.x_values.iter().enumerate() {
+                                let sname = &x_series[i];
+                                let color = if let Some(ref configs) = series_config {
+                                    if let Some(ref c) = configs.get(sname) {
+                                        if let Some(HayashiValue::Str(col)) = c.get("color") {
+                                            parse_color(col).stroke_width(size as u32)
+                                        } else {
+                                            get_series_color(i).stroke_width(size as u32)
+                                        }
+                                    } else { get_series_color(i).stroke_width(size as u32) }
+                                } else { get_series_color(i).stroke_width(size as u32) };
+                                let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(panel.y_values.iter())
+                                    .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x,&y)| (x,y)).collect();
+                                pts.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
+                                chart.draw_series(
+                                    LineSeries::new(pts.into_iter(), color)
+                                ).map_err(|e| e.to_string())?;
+                            }
+                        } else {
+                            let style = parse_color(color_name).stroke_width(size as u32);
+                            for x_vals in &panel.x_values {
+                                let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(panel.y_values.iter())
+                                    .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x,&y)| (x,y)).collect();
+                                pts.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
+                                chart.draw_series(
+                                    LineSeries::new(pts.into_iter(), style.clone())
+                                ).map_err(|e| e.to_string())?;
+                            }
+                        }
+                    }
+                    "bar" => {
+                        let style = parse_color(color_name);
+                        for x_vals in &panel.x_values {
+                            chart.draw_series(
+                                x_vals.iter().zip(panel.y_values.iter())
+                                    .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x,&y)| {
+                                        Rectangle::new([(x - size/2.0, 0.0), (x + size/2.0, y)], style.clone())
+                                    })
+                            ).map_err(|e| e.to_string())?;
+                        }
+                    }
+                    _ => {} // skip unsupported geoms in facets for now
+                }
+            }
+        }
+
+        root.present().map_err(|e| e.to_string())?;
+    }
+
+    Ok(svg_buffer)
+}
+
 /// 4. render_svg(plot)
 /// Materializes the plot spec dictionary and shared Arrow DataFrame into a finished SVG string.
 #[hayashi_fn]
@@ -1118,6 +1611,21 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
 
 /// Internal implementation of render_svg (not decorated, can be called from Rust)
 fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String> {
+    // 0. Check for faceting — if present, delegate to render_facets_impl
+    let facet_type = plot.get("spec").and_then(|s| match s {
+        HayashiValue::Dict(d) => d.get("facet_type").and_then(|v| match v {
+            HayashiValue::Str(t) => Some(t.clone()),
+            _ => None,
+        }),
+        _ => None,
+    });
+
+    if let Some(ft) = facet_type {
+        if ft == "wrap" || ft == "grid" {
+            return render_facets_impl(plot);
+        }
+    }
+
     // 1. Get DataFrame from plot spec
     let df_val = plot.get("data")
         .ok_or_else(|| "No data in plot specification".to_string())?;

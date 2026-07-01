@@ -1,4 +1,4 @@
-use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, Float64Array, Int64Array, StructArray};
+use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, Float64Array, Int64Array, StringArray, StructArray};
 use hayashi_plugin_sdk::arrow::datatypes::DataType;
 use hayashi_plugin_sdk::value::{HayashiValue, FromHayashi, IntoHayashi};
 use plotters::prelude::*;
@@ -31,6 +31,82 @@ pub fn extract_column_f64(struct_arr: &StructArray, name: &str) -> Result<Vec<f6
     }
     
     Ok(values)
+}
+
+/// Helper function to extract a column as Vec<String> from a StructArray
+/// Supports Utf8/String columns (used for faceting by categorical variable)
+pub fn extract_column_string(struct_arr: &StructArray, name: &str) -> Result<Vec<String>, String> {
+    let col = struct_arr.column_by_name(name)
+        .ok_or_else(|| format!("Column '{}' not found in DataFrame", name))?;
+
+    let len = col.len();
+    let mut values = Vec::with_capacity(len);
+
+    match col.data_type() {
+        DataType::Utf8 => {
+            let arr = col.as_any().downcast_ref::<StringArray>()
+                .ok_or_else(|| "Failed to downcast StringArray".to_string())?;
+            for i in 0..len {
+                values.push(if arr.is_null(i) { String::new() } else { arr.value(i).to_string() });
+            }
+        }
+        DataType::LargeUtf8 => {
+            let arr = col.as_any().downcast_ref::<hayashi_plugin_sdk::arrow::array::LargeStringArray>()
+                .ok_or_else(|| "Failed to downcast LargeStringArray".to_string())?;
+            for i in 0..len {
+                values.push(if arr.is_null(i) { String::new() } else { arr.value(i).to_string() });
+            }
+        }
+        DataType::Int64 => {
+            let arr = col.as_any().downcast_ref::<Int64Array>()
+                .ok_or_else(|| "Failed to downcast Int64Array".to_string())?;
+            for i in 0..len {
+                values.push(if arr.is_null(i) { String::new() } else { arr.value(i).to_string() });
+            }
+        }
+        DataType::Float64 => {
+            let arr = col.as_any().downcast_ref::<Float64Array>()
+                .ok_or_else(|| "Failed to downcast Float64Array".to_string())?;
+            for i in 0..len {
+                values.push(if arr.is_null(i) { String::new() } else { arr.value(i).to_string() });
+            }
+        }
+        other => return Err(format!("Unsupported column type for faceting: {:?}", other)),
+    }
+
+    Ok(values)
+}
+
+/// Extract unique values from a string column, preserving order of first appearance
+pub fn unique_strings(values: &[String]) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+    for v in values {
+        if v.is_empty() {
+            continue;
+        }
+        if seen.insert(v.clone()) {
+            result.push(v.clone());
+        }
+    }
+    result
+}
+
+/// Filter a StructArray by a boolean mask, returning a new StructArray
+/// (same logic as filter_array_by_mask but operates on the whole struct)
+pub fn filter_struct_by_mask(struct_arr: &StructArray, mask: &[bool]) -> Result<StructArray, String> {
+    let mut filtered_columns = Vec::new();
+    let mut filtered_fields = Vec::new();
+
+    for (field_idx, field) in struct_arr.fields().iter().enumerate() {
+        let col_array = struct_arr.column(field_idx);
+        let filtered_array = filter_array_by_mask(col_array, mask)
+            .map_err(|e| format!("Failed to filter column '{}': {}", field.name(), e))?;
+        filtered_fields.push(field.clone());
+        filtered_columns.push(filtered_array);
+    }
+
+    Ok(StructArray::new(filtered_fields.into(), filtered_columns, None))
 }
 
 /// Helper function to filter an Arrow array by a boolean mask

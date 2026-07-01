@@ -1,0 +1,12 @@
+// facet_wrap test: scatter plot faceted by a categorical column
+// Creates a 2-column wrapped grid of sub-plots, one per group
+
+let df = df_read_csv("data/mtcars.csv")
+
+let plot = gg::hayplot(df, {"x": "wt", "y": "mpg"})
+    |> gg::geom_point("auto", 4.0)
+    |> gg::labs("MPG vs WT by Cylinder", "Weight", "MPG")
+    |> gg::facet_wrap("cyl", 2, "fixed")
+    |> gg::render_svg()
+
+df_write_file(plot, "output/facet_wrap_test.svg")

@@ -1,0 +1,12 @@
+// facet_grid test: 2D grid of sub-plots
+// Rows = cyl, Columns = gear
+
+let df = df_read_csv("data/mtcars.csv")
+
+let plot = gg::hayplot(df, {"x": "wt", "y": "mpg"})
+    |> gg::geom_point("auto", 4.0)
+    |> gg::labs("MPG vs WT by Cyl/Gear", "Weight", "MPG")
+    |> gg::facet_grid("cyl", "gear", "fixed")
+    |> gg::render_svg()
+
+df_write_file(plot, "output/facet_grid_test.svg")
