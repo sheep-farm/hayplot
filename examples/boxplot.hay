@@ -5,7 +5,9 @@
 import("sheep-farm/hayplot", as=gg)
 
 // 1. Create a dataset with spread (e.g., salaries in different departments)
-let data = {"department": [1.0, 1.0, 1.0, 1.0, 1.0], "salary": [45000.0, 52000.0, 48000.0, 61000.0, 55000.0, 58000.0, 49000.0, 63000.0, 51000.0, 57000.0]}
+let data = {
+              "department": [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0], 
+              "salary"    : [45000.0, 52000.0, 48000.0, 61000.0, 55000.0, 58000.0, 49000.0, 63000.0, 51000.0, 57000.0]}
 let df = dataframe(data)
 
 // 2. Build the boxplot specification

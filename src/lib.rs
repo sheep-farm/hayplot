@@ -14,7 +14,7 @@ hayashi_plugin!();
 
 /// 1. hayplot(df, aes)
 /// Initializes the plot specification dictionary with data and aesthetic mapping.
-/// Accepts: {"x": "col_x"} or {"x": ["col_x1", "col_x2", ...]} for multiple series
+/// Accepts: {"x": "col_x"} or {"x": "col_x1,col_x2,..."} for multiple series (comma-separated)
 #[hayashi_fn]
 pub fn hayplot(
     df: ArrayRef,
@@ -1083,8 +1083,16 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         .ok_or_else(|| "Mapping must contain 'y'".to_string())?;
         
     // Check if x is a list (multiple series) or single string
+    // Hayashi doesn't support lists in dicts, so we use comma-separated string
     let x_series: Vec<String> = match x_col_val {
-        HayashiValue::Str(s) => vec![s.clone()],
+        HayashiValue::Str(s) => {
+            // Check if comma-separated (multiple series)
+            if s.contains(',') {
+                s.split(',').map(|x| x.trim().to_string()).collect()
+            } else {
+                vec![s.clone()]
+            }
+        }
         HayashiValue::List(list) => {
             let mut cols = vec![];
             for item in list {
@@ -1097,7 +1105,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             }
             cols
         }
-        _ => return Err("'x' mapping must be a String or List of Strings".to_string()),
+        _ => return Err("'x' mapping must be a String (use 'x1,x2' for multiple series)".to_string()),
     };
     
     let y_col_name = match y_col_val {
