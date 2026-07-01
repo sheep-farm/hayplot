@@ -28,6 +28,8 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `filter_data(df: DataFrame, col: String, value: Float) -> Result<DataFrame, String>`: Filters a DataFrame to rows where `col` equals `value`. Use for manual faceting.
 - `set_dimensions(plot: Dict, width: Int, height: Int) -> Dict`: Sets SVG output dimensions in pixels. Default is 800x600.
 - `set_margins(plot: Dict, top: Int, bottom: Int, left: Int, right: Int) -> Dict`: Sets plot margins in pixels. Default is 20px on all sides.
+- `set_background_color(plot: Dict, color: String) -> Dict`: Sets the background color. Default is white. Accepts named colors or hex codes.
+- `set_grid(plot: Dict, show_grid: Bool) -> Dict`: Enables or disables the grid. Default is true.
 - `save_svg(plot: Dict, filename: String) -> Result<String, String>`: Renders and saves the plot to a file in one step. Returns SVG content.
 - `facet_wrap(plot: Dict, group_col: String) -> Dict`: [DEPRECATED] Kept for compatibility. Use `filter_data()` instead.
 - `render_facets(plot: Dict) -> Result<List<String>, String>`: [DEPRECATED] Kept for compatibility. Use `filter_data()` + manual calls instead.
@@ -275,6 +277,25 @@ let plot = gg::hayplot(df, {"x": "x", "y": "y"})
     |> gg::geom_line("red", 2.0)
     |> gg::labs("Quick Save", "X", "Y")
 let svg = gg::save_svg(plot, "output.svg")
+```
+
+**Theme customization (background color and grid):**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [10.0, 20.0, 15.0, 25.0, 30.0]}
+let df = dataframe(d)
+
+// Dark theme with no grid
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_background_color("black")
+    |> gg::set_grid(false)
+    |> gg::geom_point("white", 5.0)
+    |> gg::geom_line("cyan", 2.0)
+    |> gg::labs("Dark Theme", "X", "Y")
+let svg = gg::render_svg(plot)
+write(svg, "dark_theme.svg")
 ```
 
 ## License
