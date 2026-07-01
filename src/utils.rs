@@ -131,6 +131,14 @@ pub fn filter_array_by_mask(array: &dyn Array, mask: &[bool]) -> Result<ArrayRef
             .map(|(_, &v)| v)
             .collect();
         Ok(Arc::new(Int64Array::from(filtered)) as ArrayRef)
+    } else if let Some(str_array) = array.as_any().downcast_ref::<StringArray>() {
+        let filtered: Vec<Option<&str>> = str_array
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mask[*i])
+            .map(|(_, v)| v)
+            .collect();
+        Ok(Arc::new(StringArray::from(filtered)) as ArrayRef)
     } else {
         Err(format!("Unsupported array type for filtering: {:?}", data_type))
     }
