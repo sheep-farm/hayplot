@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "hayplot"
-version = "0.6.0"
+version = "0.7.1"
 dependencies = [
  "hayashi-plugin-sdk",
  "plotters",

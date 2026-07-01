@@ -25,8 +25,8 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
 - `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
 - `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
-- `facet_wrap(plot: Dict, group_col: String) -> Dict`: Specifies a column for faceting. Groups will be rendered as separate plots.
-- `render_facets(plot: Dict) -> Result<List<String>, String>`: Renders separate SVG plots for each group specified by facet_wrap.
+- `facet_wrap(plot: Dict, group_col: String) -> Dict`: [DISABLED] Specifies a column for faceting. Temporarily non-functional due to architectural limitations.
+- `render_facets(plot: Dict) -> Result<List<String>, String>`: [DISABLED] Renders separate SVG plots for each group. Temporarily non-functional.
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
@@ -214,23 +214,7 @@ let svg_content = gg::render_svg(plot)
 write(svg_content, "log_scale.svg")
 ```
 
-**Faceting (separate plots by group):**
-
-```text
-import("sheep-farm/hayplot", as=gg)
-
-let d = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0], "y": [10.0, 20.0, 30.0, 15.0, 25.0, 35.0, 12.0, 22.0, 32.0], "group": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0]}
-let df = dataframe(d)
-
-let plot = gg::hayplot(df, {"x": "x", "y": "y"})
-    |> gg::facet_wrap("group")
-    |> gg::geom_point("blue", 5.0)
-    |> gg::geom_line("red", 2.0)
-    |> gg::labs("Grouped Data", "X", "Y")
-
-let svg_list = gg::render_facets(plot)
-// svg_list contains SVG strings for each group
-```
+**Note**: Faceting functions (`facet_wrap`, `render_facets`) are temporarily disabled due to architectural limitations. They will be re-implemented in a future version with a different approach.
 
 ## License
 
