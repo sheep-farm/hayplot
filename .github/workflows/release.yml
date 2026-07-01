@@ -29,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           targets: ${{ matrix.target }}
 
@@ -52,11 +52,11 @@ jobs:
           fi
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
         with:
           subject-path: dist/hayplot-${{ matrix.target }}.${{ matrix.ext }}
 
       - name: Upload binaries to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: dist/hayplot-${{ matrix.target }}.${{ matrix.ext }}

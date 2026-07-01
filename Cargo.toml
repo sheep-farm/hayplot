@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Depende diretamente do SDK no GitHub
-hayashi-plugin-sdk = { git = "https://github.com/sheep-farm/hayashi-plugin-sdk.git", branch = "main" }
+hayashi-plugin-sdk = { git = "https://github.com/sheep-farm/hayashi-plugin-sdk.git", rev = "410d148bbf317c68ab4d23166132d47fe552e907" }
 
 # Plotters sem dependências externas de sistema (freetype/fontconfig) para portabilidade
 plotters = { version = "0.3.7", default-features = false, features = ["svg_backend", "area_series", "line_series"] }
