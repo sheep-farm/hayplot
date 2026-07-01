@@ -1,0 +1,23 @@
+// Area Chart Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/area_chart.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a time series dataset (e.g., cumulative revenue)
+let data = {"month": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], "revenue": [10.0, 25.0, 45.0, 70.0, 100.0, 135.0, 175.0, 220.0, 270.0, 325.0, 385.0, 450.0]}
+let df = dataframe(data)
+
+// 2. Build the area chart specification
+print("Building area chart...")
+let plot = gg::hayplot(df, {"x": "month", "y": "revenue"})
+        |> gg::geom_area("blue", 2.0)
+        |> gg::labs("Cumulative Revenue Over Time", "Month", "Revenue (Thousands)")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "area_chart.svg")
+print("Plot successfully saved to 'area_chart.svg'!")
