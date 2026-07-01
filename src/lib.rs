@@ -264,6 +264,27 @@ pub fn geom_smooth(
     plot
 }
 
+/// 13.5. geom_spline(plot, color, size, tension)
+/// Appends a smooth spline curve (Catmull-Rom interpolation) to the plot spec dictionary.
+/// tension: 0.0 (linear) to 1.0 (very smooth), defaults to 0.5
+#[hayashi_fn]
+pub fn geom_spline(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    tension: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("spline".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("tension".to_string(), HayashiValue::Float(tension));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
 /// 14. labs(plot, title, x, y)
 /// Adds plot title and custom axis labels to the plot spec dictionary.
 #[hayashi_fn]
@@ -1003,6 +1024,59 @@ fn get_series_color(idx: usize) -> RGBColor {
         RGBColor(50, 205, 50),    // lime green
     ];
     palette[idx % palette.len()]
+}
+
+/// Helper function for Catmull-Rom spline interpolation
+/// Returns smooth points between control points
+fn catmull_rom_spline(points: &[(f64, f64)], tension: f64, segments_per_segment: usize) -> Vec<(f64, f64)> {
+    if points.len() < 2 {
+        return points.to_vec();
+    }
+    
+    let mut result = Vec::new();
+    
+    // Add first point
+    result.push(points[0]);
+    
+    // Interpolate between each pair of points
+    for i in 0..points.len()-1 {
+        let p0 = if i == 0 { points[0] } else { points[i-1] };
+        let p1 = points[i];
+        let p2 = points[i+1];
+        let p3 = if i == points.len()-2 { points[i+1] } else { points[i+2] };
+        
+        for t in 1..=segments_per_segment {
+            let t = t as f64 / segments_per_segment as f64;
+            let t2 = t * t;
+            let t3 = t2 * t;
+            
+            // Catmull-Rom spline formula
+            let x = 0.5 * (
+                (2.0 * p1.0) +
+                (-p0.0 + p2.0) * t +
+                (2.0 * p0.0 - 5.0 * p1.0 + 4.0 * p2.0 - p3.0) * t2 +
+                (-p0.0 + 3.0 * p1.0 - 3.0 * p2.0 + p3.0) * t3
+            );
+            
+            let y = 0.5 * (
+                (2.0 * p1.1) +
+                (-p0.1 + p2.1) * t +
+                (2.0 * p0.1 - 5.0 * p1.1 + 4.0 * p2.1 - p3.1) * t2 +
+                (-p0.1 + 3.0 * p1.1 - 3.0 * p2.1 + p3.1) * t3
+            );
+            
+            // Apply tension (0.0 = linear, 1.0 = full Catmull-Rom)
+            let lerp_x = p1.0 + (p2.0 - p1.0) * t;
+            let lerp_y = p1.1 + (p2.1 - p1.1) * t;
+            
+            let final_x = lerp_x + (x - lerp_x) * tension;
+            let final_y = lerp_y + (y - lerp_y) * tension;
+            
+            result.push((final_x, final_y));
+        }
+    }
+    
+    result
 }
 
 /// Helper function for simple linear regression (y = mx + b)
@@ -1920,6 +1994,35 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     }
                                 }
                                 // LOESS not implemented yet, skip silently
+                            }
+                            "spline" => {
+                                // For multiple series, use only first series (simplified)
+                                let style = parse_color(color_name);
+                                let line_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 2.0,
+                                };
+                                let tension = match layer.get("tension") {
+                                    Some(HayashiValue::Float(t)) => *t,
+                                    Some(HayashiValue::Int(t)) => *t as f64,
+                                    _ => 0.5,
+                                };
+
+                                let x_vals = &x_series_values[0]; // Use first series
+                                let mut points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
+                                points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+                                if points.len() >= 2 {
+                                    // Generate smooth spline points
+                                    let spline_points = catmull_rom_spline(&points, tension, 20);
+                                    chart.draw_series(std::iter::once(
+                                        PathElement::new(spline_points, style.stroke_width(line_size as u32))
+                                    )).map_err(|e| e.to_string())?;
+                                }
                             }
                             "text" => {
                                 let label = match layer.get("label") {
