@@ -11,7 +11,10 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 
 ## Available Functions
 
-- `hayplot(df: DataFrame, aes: Dict) -> Dict`: Initializes the plot specification with a DataFrame and aesthetic mapping (e.g., `aes={"x": "gdp", "y": "life_exp"}`).
+- `hayplot(df: DataFrame, aes: Dict) -> Dict`: Initializes the plot specification with a DataFrame and aesthetic mapping. 
+  - **Single series**: `aes={"x": "col_x", "y": "col_y"}`
+  - **Multiple series**: `aes={"x": ["col_x1", "col_x2", ...], "y": "col_y"}` - plots multiple x series with different colors
+  - **Auto colors**: Use `geom_point("auto", ...)` or `geom_line("auto", ...)` for automatic color palette
 - `geom_point(plot: Dict, color: String, size: Float) -> Dict`: Appends a scatter plot layer to the specification.
 - `geom_line(plot: Dict, color: String, size: Float) -> Dict`: Appends a line series layer to the specification. Can be combined with `geom_point` to produce line+dot charts.
 - `geom_bar(plot: Dict, color: String, width: Float) -> Dict`: Appends a bar chart layer to the specification.
@@ -41,7 +44,9 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
-**Color Specification**: All color parameters accept both named colors (e.g., "red", "blue", "green") and hex codes (e.g., "#FF5733", "#C70039").
+**Color Specification**: All color parameters accept both named colors (e.g., "red", "blue", "green") and hex codes (e.g., "#FF5733", "#C70039"). For multiple series, use "auto" to get automatic color palette.
+
+**Multiple Series**: The `aes` mapping accepts a list of column names for the x-axis: `{"x": ["col1", "col2", ...], "y": "col_y"}`. Each x series is rendered with a different color when using "auto" color.
 
 **PNG Export**: PNG export is available via the `png` feature flag. Build with `cargo build --release --features png` to enable it. Note: PNG backend currently supports basic geometries (point, line, bar, area) only.
 
