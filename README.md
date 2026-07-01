@@ -30,7 +30,7 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_smooth(plot: Dict, color: String, size: Float, method: String, se: Bool) -> Dict`: Appends a smoothed conditional mean (linear regression or LOESS). method: "lm" for linear regression. se: whether to show standard error bands.
 - `geom_text(plot: Dict, label: String, x: Float, y: Float, color: String, size: Float) -> Dict`: Adds text annotations at specified coordinates.
 - `draw_element(plot, Dict, element_type: String, params: Dict) -> Dict`: Draws arbitrary geometric elements for annotations. element_type: "circle", "rect", "line_segment", "arrow". params: element-specific dict (x, y, size, width, height, x1, y1, x2, y2, arrow_size, color).
-- `show_legend(plot, Dict) -> Dict`: Enables automatic legend display for multiple series plots. Shows series names and colors in top-right corner.
+- `show_legend(plot: Dict, position: String, location: String) -> Dict`: Enables automatic legend display for multiple series plots. position: "left", "right", or "bottom". location: "inside" or "outside". When "outside", the corresponding plot padding is increased so the data recedes and the legend is drawn aligned to the margin, centered on the perpendicular axis.
 - `set_series_config(plot, Dict, configs: Dict) -> Dict`: Sets configuration for individual series (color, size, etc.). configs: {"series_name": {"color": "blue", "size": 2.0}, ...}. Works with multiple x series.
 - `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
 - `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
@@ -96,16 +96,39 @@ let plot = gg::hayplot(df, {"x": "control,treated", "y": "period"})
 
 **Automatic Legend:**
 
-Display legend for multiple series:
+Display legend for multiple series with flexible positioning:
 
 ```text
+// Legend on the right, outside the plot area (default)
 let plot = gg::hayplot(df, {"x": "control,treated", "y": "period"})
     |> gg::geom_line("auto", 2.0)
     |> gg::geom_point("auto", 3.0)
-    |> gg::show_legend()
+    |> gg::show_legend("right", "outside")
+
+// Legend at the bottom, outside the plot area
+let plot = gg::hayplot(df, {"x": "control,treated", "y": "period"})
+    |> gg::geom_line("auto", 2.0)
+    |> gg::show_legend("bottom", "outside")
+
+// Legend on the left, outside the plot area
+let plot = gg::hayplot(df, {"x": "control,treated", "y": "period"})
+    |> gg::geom_line("auto", 2.0)
+    |> gg::show_legend("left", "outside")
+
+// Legend inside the plot area (top-right)
+let plot = gg::hayplot(df, {"x": "control,treated", "y": "period"})
+    |> gg::geom_line("auto", 2.0)
+    |> gg::show_legend("right", "inside")
 ```
 
-Legend appears in top-right corner with series names and colors.
+When `location` is `"outside"`, the corresponding plot padding is automatically
+increased so the data recedes and does not overlap the legend. The legend is
+drawn aligned to the corresponding margin and centered on the perpendicular
+axis. Legend dimensions are calculated dynamically based on series names and
+count.
+
+Supported positions: `"left"`, `"right"`, `"bottom"`.
+Supported locations: `"inside"`, `"outside"`.
 
 Supported config keys:
 - `color`: named color or hex code

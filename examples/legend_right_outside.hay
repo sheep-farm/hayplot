@@ -1,0 +1,25 @@
+import("sheep-farm/hayplot", as=gg)
+
+// Exemplo de legenda posicionada à direita (outside)
+// Demonstração do posicionamento outside da legenda
+
+// Criar dados simples com duas séries x
+let data = {
+    "series_A": [1.0, 2.0, 3.0, 4.0, 5.0],
+    "series_B": [1.5, 2.5, 3.5, 4.5, 5.5],
+    "y": [10.0, 20.0, 30.0, 40.0, 50.0]
+}
+
+let df = dataframe(data)
+
+// Plot com legenda à direita (outside)
+let plot = gg::hayplot(df, {"x": "series_A,series_B", "y": "y"})
+    |> gg::set_series_config({"series_A": {"color": "blue", "size": 3.0}, "series_B": {"color": "red", "size": 3.0}})
+    |> gg::geom_line("auto", 2.0)
+    |> gg::geom_point("auto", 4.0)
+    |> gg::show_legend("right", "outside")
+    |> gg::labs("Legend Right Outside", "X Values", "Y")
+
+let svg = gg::render_svg(plot)
+write(svg, "legend_right_outside.svg")
+print("Plot salvo como 'legend_right_outside.svg'")

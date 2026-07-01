@@ -1,6 +1,5 @@
 use hayashi_plugin_sdk::{hayashi_fn, hayashi_plugin};
-use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, Float64Array, Int64Array, StructArray};
-use hayashi_plugin_sdk::arrow::datatypes::DataType;
+use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, StructArray};
 use hayashi_plugin_sdk::value::{HayashiValue, FromHayashi, IntoHayashi};
 use plotters::prelude::*;
 use std::collections::HashMap;
@@ -11,6 +10,14 @@ use base64;
 
 // Exposes dynamic library C ABI deallocation hooks
 hayashi_plugin!();
+
+// Internal modules
+mod utils;
+mod math;
+
+// Re-export utilities for internal use
+pub use utils::{extract_column_f64, filter_array_by_mask, parse_color, parse_color_to_rgb, get_series_color};
+pub use math::{catmull_rom_spline, linear_regression, linear_regression_se};
 
 /// 1. hayplot(df, aes)
 /// Initializes the plot specification dictionary with data and aesthetic mapping.
@@ -359,18 +366,26 @@ pub fn draw_element(
     plot
 }
 
-/// 16.6. show_legend(plot)
+/// 16.6. show_legend(plot, position, location)
 /// Enables automatic legend display for the plot.
 /// Legend shows series names and colors when multiple series are plotted.
+/// position: "left", "right", "bottom" (default: "right")
+/// location: "inside", "outside" (default: "outside")
 #[hayashi_fn]
 pub fn show_legend(
-    mut plot: HashMap<String, HayashiValue>
+    mut plot: HashMap<String, HayashiValue>,
+    position: String,
+    location: String
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("show_legend".to_string(), HayashiValue::Bool(true));
+        spec.insert("legend_position".to_string(), HayashiValue::Str(position));
+        spec.insert("legend_location".to_string(), HayashiValue::Str(location));
     } else {
         let mut spec = HashMap::new();
         spec.insert("show_legend".to_string(), HayashiValue::Bool(true));
+        spec.insert("legend_position".to_string(), HayashiValue::Str(position));
+        spec.insert("legend_location".to_string(), HayashiValue::Str(location));
         plot.insert("spec".to_string(), HayashiValue::Dict(spec));
     }
     plot
@@ -440,7 +455,7 @@ pub fn set_dimensions(
 }
 
 /// 17. set_margins(plot, top, bottom, left, right)
-/// Sets the plot margins in pixels. Default is 20px on all sides.
+/// Sets the plot margins in pixels. Default is top=60, bottom=60, left=60, right=20.
 #[hayashi_fn]
 pub fn set_margins(
     mut plot: HashMap<String, HayashiValue>,
@@ -454,6 +469,122 @@ pub fn set_margins(
         spec.insert("margin_bottom".to_string(), HayashiValue::Int(bottom));
         spec.insert("margin_left".to_string(), HayashiValue::Int(left));
         spec.insert("margin_right".to_string(), HayashiValue::Int(right));
+    }
+    plot
+}
+
+/// 17.1. set_margins_dict(plot, margins)
+/// Sets the plot margins using a dictionary. Default values: top=60, bottom=60, left=60, right=20.
+/// margins: Dict with optional keys "top", "bottom", "left", "right"
+/// Example: {"top": 80, "left": 70}
+#[hayashi_fn]
+pub fn set_margins_dict(
+    mut plot: HashMap<String, HayashiValue>,
+    margins: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    // Default margin values
+    let default_top = 60i64;
+    let default_bottom = 60i64;
+    let default_left = 60i64;
+    let default_right = 20i64;
+    
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        let top = margins.get("top").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_top);
+        
+        let bottom = margins.get("bottom").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_bottom);
+        
+        let left = margins.get("left").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_left);
+        
+        let right = margins.get("right").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_right);
+        
+        spec.insert("margin_top".to_string(), HayashiValue::Int(top));
+        spec.insert("margin_bottom".to_string(), HayashiValue::Int(bottom));
+        spec.insert("margin_left".to_string(), HayashiValue::Int(left));
+        spec.insert("margin_right".to_string(), HayashiValue::Int(right));
+    }
+    plot
+}
+
+/// 17.2. set_padding(plot, top, bottom, left, right)
+/// Sets the plot padding (internal spacing) in pixels. Default is 10px on all sides.
+/// Padding adds space inside the plot area, preventing data from touching borders.
+#[hayashi_fn]
+pub fn set_padding(
+    mut plot: HashMap<String, HayashiValue>,
+    top: i64,
+    bottom: i64,
+    left: i64,
+    right: i64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("padding_top".to_string(), HayashiValue::Int(top));
+        spec.insert("padding_bottom".to_string(), HayashiValue::Int(bottom));
+        spec.insert("padding_left".to_string(), HayashiValue::Int(left));
+        spec.insert("padding_right".to_string(), HayashiValue::Int(right));
+    }
+    plot
+}
+
+/// 17.3. set_padding_dict(plot, padding)
+/// Sets the plot padding using a dictionary. Default values: top=10, bottom=10, left=10, right=10.
+/// padding: Dict with optional keys "top", "bottom", "left", "right"
+/// Example: {"top": 20, "right": 15}
+#[hayashi_fn]
+pub fn set_padding_dict(
+    mut plot: HashMap<String, HayashiValue>,
+    padding: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    // Default padding values
+    let default_top = 10i64;
+    let default_bottom = 10i64;
+    let default_left = 10i64;
+    let default_right = 10i64;
+    
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        let top = padding.get("top").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_top);
+        
+        let bottom = padding.get("bottom").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_bottom);
+        
+        let left = padding.get("left").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_left);
+        
+        let right = padding.get("right").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i),
+            HayashiValue::Float(f) => Some(*f as i64),
+            _ => None,
+        }).unwrap_or(default_right);
+        
+        spec.insert("padding_top".to_string(), HayashiValue::Int(top));
+        spec.insert("padding_bottom".to_string(), HayashiValue::Int(bottom));
+        spec.insert("padding_left".to_string(), HayashiValue::Int(left));
+        spec.insert("padding_right".to_string(), HayashiValue::Int(right));
     }
     plot
 }
@@ -756,26 +887,55 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
     };
     
     // Get margins from spec or use defaults
+    // Default margins: top=60 (title area), bottom=60 (x-axis labels), left=60 (y-axis labels), right=20
     let (margin_top, margin_bottom, margin_left, margin_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
         let mt = spec.get("margin_top").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
-        }).unwrap_or(20);
+        }).unwrap_or(60);
         let mb = spec.get("margin_bottom").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
-        }).unwrap_or(20);
+        }).unwrap_or(60);
         let ml = spec.get("margin_left").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
-        }).unwrap_or(20);
+        }).unwrap_or(60);
         let mr = spec.get("margin_right").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
         }).unwrap_or(20);
         (mt, mb, ml, mr)
     } else {
-        (20, 20, 20, 20)
+        (60, 60, 60, 20)
+    };
+    
+    // Get padding from spec or use defaults
+    // Default padding: top=10, bottom=10, left=10, right=10 (internal spacing within plot area)
+    let (padding_top, padding_bottom, padding_left, padding_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        let pt = spec.get("padding_top").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        let pb = spec.get("padding_bottom").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        let pl = spec.get("padding_left").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        let pr = spec.get("padding_right").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        (pt, pb, pl, pr)
+    } else {
+        (10.0, 10.0, 10.0, 10.0)
     };
     
     // Get background color from spec or use default (white)
@@ -806,6 +966,18 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
         // Parse and apply background color (convert to RGBColor)
         let bg_rgb = parse_color_to_rgb(&background_color_name);
         root.fill(&bg_rgb).map_err(|e| e.to_string())?;
+        
+        // Apply padding to axis ranges (internal spacing within plot area)
+        let plot_width = width as f64 - margin_left as f64 - margin_right as f64;
+        let plot_height = height as f64 - margin_top as f64 - margin_bottom as f64;
+        
+        let x_pixels_per_unit = (x_max - x_min) / plot_width;
+        let y_pixels_per_unit = (y_max - y_min) / plot_height;
+        
+        let x_min = x_min + padding_left / x_pixels_per_unit;
+        let x_max = x_max - padding_right / x_pixels_per_unit;
+        let y_min = y_min + padding_bottom / y_pixels_per_unit;
+        let y_max = y_max - padding_top / y_pixels_per_unit;
         
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
@@ -912,266 +1084,30 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
 
 
 /// Helper function to extract a column as Vec<f64> from a StructArray
-fn extract_column_f64(struct_arr: &StructArray, name: &str) -> Result<Vec<f64>, String> {
-    let col = struct_arr.column_by_name(name)
-        .ok_or_else(|| format!("Column '{}' not found in DataFrame", name))?;
-        
-    let len = col.len();
-    let mut values = Vec::with_capacity(len);
-    
-    match col.data_type() {
-        DataType::Float64 => {
-            let arr = col.as_any().downcast_ref::<hayashi_plugin_sdk::arrow::array::Float64Array>()
-                .ok_or_else(|| "Failed to downcast Float64Array".to_string())?;
-            for i in 0..len {
-                values.push(if arr.is_null(i) { f64::NAN } else { arr.value(i) });
-            }
-        }
-        DataType::Int64 => {
-            let arr = col.as_any().downcast_ref::<hayashi_plugin_sdk::arrow::array::Int64Array>()
-                .ok_or_else(|| "Failed to downcast Int64Array".to_string())?;
-            for i in 0..len {
-                values.push(if arr.is_null(i) { f64::NAN } else { arr.value(i) as f64 });
-            }
-        }
-        other => return Err(format!("Unsupported column type for plotting: {:?}", other)),
-    }
-    
-    Ok(values)
-}
+// Moved to utils.rs
 
 /// Helper function to filter an Arrow array by a boolean mask
-fn filter_array_by_mask(array: &dyn Array, mask: &[bool]) -> Result<ArrayRef, String> {
-    let data_type = array.data_type();
-    
-    if let Some(float_array) = array.as_any().downcast_ref::<Float64Array>() {
-        let values = float_array.values();
-        let filtered: Vec<f64> = values
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| mask[*i])
-            .map(|(_, &v)| v)
-            .collect();
-        Ok(Arc::new(Float64Array::from(filtered)) as ArrayRef)
-    } else if let Some(int_array) = array.as_any().downcast_ref::<Int64Array>() {
-        let values = int_array.values();
-        let filtered: Vec<i64> = values
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| mask[*i])
-            .map(|(_, &v)| v)
-            .collect();
-        Ok(Arc::new(Int64Array::from(filtered)) as ArrayRef)
-    } else {
-        Err(format!("Unsupported array type for filtering: {:?}", data_type))
-    }
-}
+// Moved to utils.rs
 
 /// Helper function to parse colors from string names or hex codes
-fn parse_color(name: &str) -> ShapeStyle {
-    let base_color = if name.starts_with('#') {
-        // Parse hex color #RRGGBB
-        let hex = name.trim_start_matches('#');
-        if hex.len() == 6 {
-            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
-            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
-            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
-            RGBColor(r, g, b)
-        } else {
-            // Invalid hex, default to blue
-            BLUE
-        }
-    } else {
-        // Parse named colors
-        match name.to_lowercase().as_str() {
-            "red" => RED,
-            "blue" => BLUE,
-            "green" => GREEN,
-            "yellow" => YELLOW,
-            "magenta" => MAGENTA,
-            "cyan" => CYAN,
-            "black" => BLACK,
-            "white" => WHITE,
-            _ => BLUE, // Default to blue for unknown colors
-        }
-    };
-    base_color.filled()
-}
+// Moved to utils.rs
 
 /// Helper function to parse colors from string names or hex codes to RGBColor
-fn parse_color_to_rgb(name: &str) -> RGBColor {
-    if name.starts_with('#') {
-        // Parse hex color #RRGGBB
-        let hex = name.trim_start_matches('#');
-        if hex.len() == 6 {
-            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
-            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
-            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
-            RGBColor(r, g, b)
-        } else {
-            // Invalid hex, default to white
-            WHITE
-        }
-    } else {
-        // Parse named colors
-        match name.to_lowercase().as_str() {
-            "red" => RED,
-            "blue" => BLUE,
-            "green" => GREEN,
-            "yellow" => YELLOW,
-            "magenta" => MAGENTA,
-            "cyan" => CYAN,
-            "black" => BLACK,
-            "white" => WHITE,
-            _ => WHITE, // Default to white for background
-        }
-    }
-}
+// Moved to utils.rs
 
 /// Helper function to get color for series index (cycles through palette)
-fn get_series_color(idx: usize) -> RGBColor {
-    let palette = [
-        RGBColor(70, 130, 180),   // steel blue
-        RGBColor(220, 20, 60),    // crimson
-        RGBColor(34, 139, 34),    // forest green
-        RGBColor(255, 140, 0),    // dark orange
-        RGBColor(128, 0, 128),    // purple
-        RGBColor(0, 191, 255),    // deep sky blue
-        RGBColor(255, 105, 180),  // hot pink
-        RGBColor(50, 205, 50),    // lime green
-    ];
-    palette[idx % palette.len()]
-}
+// Moved to utils.rs
 
 /// Helper function for Catmull-Rom spline interpolation
 /// Returns smooth points between control points
-fn catmull_rom_spline(points: &[(f64, f64)], tension: f64, segments_per_segment: usize) -> Vec<(f64, f64)> {
-    if points.len() < 2 {
-        return points.to_vec();
-    }
-    
-    let mut result = Vec::new();
-    
-    // Add first point
-    result.push(points[0]);
-    
-    // Interpolate between each pair of points
-    for i in 0..points.len()-1 {
-        let p0 = if i == 0 { points[0] } else { points[i-1] };
-        let p1 = points[i];
-        let p2 = points[i+1];
-        let p3 = if i == points.len()-2 { points[i+1] } else { points[i+2] };
-        
-        for t in 1..=segments_per_segment {
-            let t = t as f64 / segments_per_segment as f64;
-            let t2 = t * t;
-            let t3 = t2 * t;
-            
-            // Catmull-Rom spline formula
-            let x = 0.5 * (
-                (2.0 * p1.0) +
-                (-p0.0 + p2.0) * t +
-                (2.0 * p0.0 - 5.0 * p1.0 + 4.0 * p2.0 - p3.0) * t2 +
-                (-p0.0 + 3.0 * p1.0 - 3.0 * p2.0 + p3.0) * t3
-            );
-            
-            let y = 0.5 * (
-                (2.0 * p1.1) +
-                (-p0.1 + p2.1) * t +
-                (2.0 * p0.1 - 5.0 * p1.1 + 4.0 * p2.1 - p3.1) * t2 +
-                (-p0.1 + 3.0 * p1.1 - 3.0 * p2.1 + p3.1) * t3
-            );
-            
-            // Apply tension (0.0 = linear, 1.0 = full Catmull-Rom)
-            let lerp_x = p1.0 + (p2.0 - p1.0) * t;
-            let lerp_y = p1.1 + (p2.1 - p1.1) * t;
-            
-            let final_x = lerp_x + (x - lerp_x) * tension;
-            let final_y = lerp_y + (y - lerp_y) * tension;
-            
-            result.push((final_x, final_y));
-        }
-    }
-    
-    result
-}
+// Moved to math.rs
 
 /// Helper function for simple linear regression (y = mx + b)
 /// Returns (slope, intercept, r_squared)
-fn linear_regression(x: &[f64], y: &[f64]) -> Option<(f64, f64, f64)> {
-    let n = x.len();
-    if n < 2 {
-        return None;
-    }
-    
-    // Filter out NaN values
-    let pairs: Vec<(f64, f64)> = x.iter().zip(y.iter())
-        .filter(|(&xi, &yi)| !xi.is_nan() && !yi.is_nan())
-        .map(|(&xi, &yi)| (xi, yi))
-        .collect();
-    
-    if pairs.len() < 2 {
-        return None;
-    }
-    
-    let n = pairs.len() as f64;
-    let sum_x: f64 = pairs.iter().map(|&(xi, _)| xi).sum();
-    let sum_y: f64 = pairs.iter().map(|&(_, yi)| yi).sum();
-    let sum_xy: f64 = pairs.iter().map(|&(xi, yi)| xi * yi).sum();
-    let sum_x2: f64 = pairs.iter().map(|&(xi, _)| xi * xi).sum();
-    let _sum_y2: f64 = pairs.iter().map(|&(_, yi)| yi * yi).sum();
-    
-    let denominator = n * sum_x2 - sum_x * sum_x;
-    if denominator.abs() < 1e-10 {
-        return None; // Vertical line or constant x
-    }
-    
-    let slope = (n * sum_xy - sum_x * sum_y) / denominator;
-    let intercept = (sum_y - slope * sum_x) / n;
-    
-    // Calculate R-squared
-    let mean_y = sum_y / n;
-    let ss_tot: f64 = pairs.iter().map(|&(_, yi)| (yi - mean_y).powi(2)).sum();
-    let ss_res: f64 = pairs.iter().map(|&(xi, yi)| (yi - (slope * xi + intercept)).powi(2)).sum();
-    let r_squared = if ss_tot.abs() < 1e-10 { 0.0 } else { 1.0 - ss_res / ss_tot };
-    
-    Some((slope, intercept, r_squared))
-}
+// Moved to math.rs
 
 /// Helper function to calculate standard error of regression
-fn linear_regression_se(x: &[f64], y: &[f64], slope: f64, intercept: f64) -> Option<Vec<f64>> {
-    let n = x.len();
-    if n < 3 {
-        return None;
-    }
-    
-    let pairs: Vec<(f64, f64)> = x.iter().zip(y.iter())
-        .filter(|(&xi, &yi)| !xi.is_nan() && !yi.is_nan())
-        .map(|(&xi, &yi)| (xi, yi))
-        .collect();
-    
-    if pairs.len() < 3 {
-        return None;
-    }
-    
-    let n = pairs.len() as f64;
-    let residuals: Vec<f64> = pairs.iter().map(|&(xi, yi)| yi - (slope * xi + intercept)).collect();
-    let sse: f64 = residuals.iter().map(|&r| r * r).sum();
-    let mse = sse / (n - 2.0);
-    
-    let sum_x: f64 = pairs.iter().map(|&(xi, _)| xi).sum();
-    let sum_x2: f64 = pairs.iter().map(|&(xi, _)| xi * xi).sum();
-    let sxx = sum_x2 - sum_x * sum_x / n;
-    
-    if sxx.abs() < 1e-10 {
-        return None;
-    }
-    
-    let se_slope = (mse / sxx).sqrt();
-    let se_intercept = (mse * (1.0 / n + sum_x * sum_x / (n * n * sxx))).sqrt();
-    
-    Some(vec![se_slope, se_intercept])
-}
+// Moved to math.rs
 
 /// 4. render_svg(plot)
 /// Materializes the plot spec dictionary and shared Arrow DataFrame into a finished SVG string.
@@ -1414,26 +1350,151 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     };
 
     // 8. Get margins from spec or use defaults
+    // Default margins: top=60 (title area), bottom=60 (x-axis labels), left=60 (y-axis labels), right=20
     let (margin_top, margin_bottom, margin_left, margin_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
         let mt = spec.get("margin_top").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
-        }).unwrap_or(20);
+        }).unwrap_or(60);
         let mb = spec.get("margin_bottom").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
-        }).unwrap_or(20);
+        }).unwrap_or(60);
         let ml = spec.get("margin_left").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
-        }).unwrap_or(20);
+        }).unwrap_or(60);
         let mr = spec.get("margin_right").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
             _ => None,
         }).unwrap_or(20);
         (mt, mb, ml, mr)
     } else {
-        (20, 20, 20, 20)
+        (60, 60, 60, 20)
+    };
+
+    // 8.5. Get padding from spec or use defaults
+    // Default padding: top=10, bottom=10, left=10, right=10 (internal spacing within plot area)
+    let (padding_top, padding_bottom, padding_left, padding_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        let pt = spec.get("padding_top").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        let pb = spec.get("padding_bottom").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        let pl = spec.get("padding_left").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        let pr = spec.get("padding_right").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(10.0);
+        (pt, pb, pl, pr)
+    } else {
+        (10.0, 10.0, 10.0, 10.0)
+    };
+
+    // 8.6. Read legend configuration from spec
+    let show_legend = if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
+        spec.get("show_legend").and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        }).unwrap_or(false)
+    } else {
+        false
+    };
+
+    let legend_position = if show_legend {
+        if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
+            spec.get("legend_position").and_then(|v| match v {
+                HayashiValue::Str(s) => Some(s.clone()),
+                _ => None,
+            }).unwrap_or_else(|| "right".to_string())
+        } else {
+            "right".to_string()
+        }
+    } else {
+        "right".to_string()
+    };
+
+    let legend_location = if show_legend {
+        if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
+            spec.get("legend_location").and_then(|v| match v {
+                HayashiValue::Str(s) => Some(s.clone()),
+                _ => None,
+            }).unwrap_or_else(|| "outside".to_string())
+        } else {
+            "outside".to_string()
+        }
+    } else {
+        "outside".to_string()
+    };
+
+    // 8.7. Calculate legend dimensions and adjust margins if outside
+    // The legend is drawn inside the SVG canvas, aligned to a plot margin and
+    // centered on the perpendicular axis. The corresponding margin is increased
+    // so the ChartBuilder reduces the plot area, creating empty space where the
+    // legend sits. (Padding only adjusts axis ranges / data scale, it does not
+    // create empty space, so it cannot be used for this purpose.)
+    //
+    // Layout: vertical (items stacked) for left/right, horizontal (items side
+    // by side) for bottom — matching ggplot2 behavior.
+    let legend_dims: Option<(f64, f64)> = if show_legend && x_series.len() > 1 {
+        let char_width = 7.0;       // approximate pixels per character
+        let line_height = 20.0;     // pixels per legend item (vertical layout)
+        let box_padding = 10.0;     // padding inside legend box
+        let item_gap = 25.0;        // horizontal gap between items (bottom layout)
+
+        let max_name_width = x_series.iter()
+            .map(|name| name.len() as f64 * char_width)
+            .fold(0.0f64, |a, b| a.max(b));
+
+        let (box_width, box_height) = if legend_location == "outside" && legend_position == "bottom" {
+            // Horizontal layout: sum of all item widths
+            let total_text: f64 = x_series.iter()
+                .map(|name| name.len() as f64 * char_width + 35.0) // color box + text
+                .sum();
+            let box_w = total_text + (x_series.len() - 1) as f64 * item_gap + box_padding * 2.0;
+            let box_h = line_height + box_padding * 2.0;
+            (box_w, box_h)
+        } else {
+            // Vertical layout (left, right, inside)
+            let box_w = max_name_width + 35.0 + 15.0;   // text + margin + color box
+            let box_h = x_series.len() as f64 * line_height + box_padding * 2.0;
+            (box_w, box_h)
+        };
+
+        Some((box_width, box_height))
+    } else {
+        None
+    };
+
+    // Adjust margins to shrink the plot area and reserve space for the legend
+    let (margin_top, margin_bottom, margin_left, margin_right) = {
+        let mt = margin_top;
+        let mut mb = margin_bottom;
+        let mut ml = margin_left;
+        let mut mr = margin_right;
+
+        if let Some((box_w, box_h)) = legend_dims {
+            if legend_location == "outside" {
+                match legend_position.as_str() {
+                    "bottom" => mb += box_h.ceil() as u32 + 3,
+                    "right"  => mr += box_w.ceil() as u32 + 3,
+                    "left"   => ml += box_w.ceil() as u32 + 3,
+                    _        => mr += box_w.ceil() as u32 + 3,
+                }
+            }
+        }
+
+        (mt, mb, ml, mr)
     };
 
     // 9. Get background color from spec or use default (white)
@@ -1464,6 +1525,19 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         // Parse and apply background color (convert to RGBColor)
         let bg_rgb = parse_color_to_rgb(&background_color_name);
         root.fill(&bg_rgb).map_err(|e| e.to_string())?;
+        
+        // Apply padding to axis ranges (internal spacing within plot area)
+        // Padding is in pixels, so we need to convert to data coordinates
+        let plot_width = width as f64 - margin_left as f64 - margin_right as f64;
+        let plot_height = height as f64 - margin_top as f64 - margin_bottom as f64;
+        
+        let x_pixels_per_unit = (x_max - x_min) / plot_width;
+        let y_pixels_per_unit = (y_max - y_min) / plot_height;
+        
+        let x_min = x_min + padding_left / x_pixels_per_unit;
+        let x_max = x_max - padding_right / x_pixels_per_unit;
+        let y_min = y_min + padding_bottom / y_pixels_per_unit;
+        let y_max = y_max - padding_top / y_pixels_per_unit;
         
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
@@ -2216,81 +2290,119 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     }
     
     // 12. Draw legend if enabled and multiple series exist
-    let show_legend = if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
-        spec.get("show_legend").and_then(|v| match v {
-            HayashiValue::Bool(b) => Some(*b),
-            _ => None,
-        }).unwrap_or(false)
-    } else {
-        false
-    };
-    
-    let legend_svg = if show_legend && x_series.len() > 1 {
-        // Dynamic legend rendering with calculated dimensions
-        let char_width = 7.0; // approximate pixels per character
-        let line_height = 20.0; // pixels per legend item
+    // The legend is drawn in the empty space reserved by increasing the
+    // corresponding margin. It is aligned to the plot area edge and centered
+    // on the perpendicular axis.
+    let legend_svg = if let Some((box_width, box_height)) = legend_dims {
         let box_padding = 10.0; // padding inside legend box
-        let text_offset = 2.0; // vertical offset for text baseline
-        
-        // Calculate max series name width
-        let max_name_width = x_series.iter()
-            .map(|name| name.len() as f64 * char_width)
-            .fold(0.0f64, |a, b| a.max(b));
-        
-        // Calculate legend dimensions
-        let box_width = (max_name_width + 35.0 + 15.0).ceil() as i32; // text + margin + color box
-        let box_height = (x_series.len() as f64 * line_height + box_padding * 2.0).ceil() as i32;
-        
-        let legend_box_x = width as i32 - box_width - 20; // 20px right margin
-        let legend_box_y = 60; // Top margin
-        
+        let text_offset = 2.0;  // vertical offset for text baseline
+        let box_width = box_width.ceil() as i32;
+        let box_height = box_height.ceil() as i32;
+
+        // Plot area boundaries (reduced by legend-adjusted margins)
+        let plot_x_start = margin_left as i32;
+        let plot_x_end   = width as i32 - margin_right as i32;
+        let plot_y_start = margin_top as i32;
+        let plot_y_end   = height as i32 - margin_bottom as i32;
+
+        let (legend_box_x, legend_box_y) = if legend_location == "outside" {
+            match legend_position.as_str() {
+                "bottom" => {
+                    // Below the plot area, centered horizontally
+                    let x = (plot_x_start + plot_x_end) / 2 - box_width / 2;
+                    let y = plot_y_end; // top of reserved space
+                    (x, y)
+                },
+                "left" => {
+                    // Left of the plot area, centered vertically
+                    let x = plot_x_start - box_width; // start of reserved space
+                    let y = (plot_y_start + plot_y_end) / 2 - box_height / 2;
+                    (x, y)
+                },
+                "right" => {
+                    // Right of the plot area, centered vertically
+                    let x = plot_x_end; // start of reserved space
+                    let y = (plot_y_start + plot_y_end) / 2 - box_height / 2;
+                    (x, y)
+                },
+                _ => {
+                    // Default: top-right inside plot area
+                    let x = plot_x_end - box_width - 10;
+                    let y = plot_y_start + 10;
+                    (x, y)
+                }
+            }
+        } else {
+            // Inside positioning (top-right inside plot area)
+            let x = plot_x_end - box_width - 10;
+            let y = plot_y_start + 10;
+            (x, y)
+        };
+
         let mut legend_html = String::new();
-        
-        // Draw legend background box
-        legend_html.push_str(&format!(
-            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" opacity=\"0.9\"/>\n",
-            legend_box_x, legend_box_y, box_width, box_height
-        ));
-        
-        // Draw legend items with dynamic positioning
-        let start_y = legend_box_y as f64 + box_padding;
-        
+
+        // Draw legend items
+        let line_height = 20.0_f64;
+        let item_gap = 25.0_f64;
+        let char_width = 7.0_f64;
+
+        // Vertical center of a single row inside the box
+        let row_center_y = legend_box_y as f64 + box_height as f64 / 2.0;
+
+        let horizontal = legend_location == "outside" && legend_position == "bottom";
+
+        let mut cursor_x = legend_box_x as f64 + box_padding;
+
         for (idx, series_name) in x_series.iter().enumerate() {
-            let item_y = start_y + (idx as f64 * line_height);
-            
             // Get color for this series
             let series_color = if let Some(ref configs) = series_config {
                 if let Some(ref config) = configs.get(series_name) {
                     if let Some(HayashiValue::Str(c)) = config.get("color") {
                         c.clone()
                     } else {
-                        format!("#{:02X}{:02X}{:02X}", 
+                        format!("#{:02X}{:02X}{:02X}",
                             get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
                     }
                 } else {
-                    format!("#{:02X}{:02X}{:02X}", 
+                    format!("#{:02X}{:02X}{:02X}",
                         get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
                 }
             } else {
-                format!("#{:02X}{:02X}{:02X}", 
+                format!("#{:02X}{:02X}{:02X}",
                     get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
             };
-            
-            // Draw color box (centered vertically in line)
-            let color_box_y = item_y - 7.5; // center 15px box in 20px line
-            legend_html.push_str(&format!(
-                "<rect x=\"{}\" y=\"{}\" width=\"15\" height=\"15\" fill=\"{}\" stroke=\"black\" stroke-width=\"1\"/>\n",
-                legend_box_x + 10, color_box_y, series_color
-            ));
-            
-            // Draw series name text (vertically centered with color box)
-            let text_y = item_y + text_offset;
-            legend_html.push_str(&format!(
-                "<text x=\"{}\" y=\"{}\" font-family=\"sans-serif\" font-size=\"12\" fill=\"black\">{}</text>\n",
-                legend_box_x + 35, text_y, series_name
-            ));
+
+            if horizontal {
+                // Horizontal layout (bottom): items side by side
+                let color_box_x = cursor_x;
+                let color_box_y = row_center_y - 7.5;
+                legend_html.push_str(&format!(
+                    "<rect x=\"{}\" y=\"{}\" width=\"15\" height=\"15\" fill=\"{}\" stroke=\"black\" stroke-width=\"1\"/>\n",
+                    color_box_x, color_box_y, series_color
+                ));
+                let text_x = color_box_x + 20.0;
+                let text_y = row_center_y + text_offset;
+                legend_html.push_str(&format!(
+                    "<text x=\"{}\" y=\"{}\" font-family=\"sans-serif\" font-size=\"12\" fill=\"black\">{}</text>\n",
+                    text_x, text_y, series_name
+                ));
+                cursor_x = text_x + series_name.len() as f64 * char_width + item_gap;
+            } else {
+                // Vertical layout (left, right, inside): items stacked
+                let item_y = legend_box_y as f64 + box_padding + (idx as f64 * line_height);
+                let color_box_y = item_y - 7.5;
+                legend_html.push_str(&format!(
+                    "<rect x=\"{}\" y=\"{}\" width=\"15\" height=\"15\" fill=\"{}\" stroke=\"black\" stroke-width=\"1\"/>\n",
+                    legend_box_x + 10, color_box_y, series_color
+                ));
+                let text_y = item_y + text_offset;
+                legend_html.push_str(&format!(
+                    "<text x=\"{}\" y=\"{}\" font-family=\"sans-serif\" font-size=\"12\" fill=\"black\">{}</text>\n",
+                    legend_box_x + 35, text_y, series_name
+                ));
+            }
         }
-        
+
         Some(legend_html)
     } else {
         None
@@ -2305,3 +2417,6 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     
     Ok(svg_buffer)
 }
+
+#[cfg(test)]
+mod tests;

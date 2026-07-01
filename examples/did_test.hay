@@ -17,7 +17,7 @@ let plot = gg :: hayplot (df , {"x": "series_control_group_A,series_treatment_gr
     |> gg :: set_series_config ({"series_control_group_A": {"color": "blue", "size": 2.0}, "series_treatment_group_B": {"color": "red", "size": 4.0}})
     |> gg :: geom_line ("auto", 2.0)
     |> gg :: geom_point ("auto", 3.0)
-    |> gg :: show_legend ()
+    |> gg :: show_legend ("right", "outside")
     |> gg :: labs ("Custom Series Config with Legend", "X Values", "Y")
 
 let svg = gg :: render_svg (plot)

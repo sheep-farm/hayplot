@@ -1,0 +1,95 @@
+import("sheep-farm/hayplot" as= gg)
+
+// Demonstração do sistema de margins e padding (NOVO)
+// Margins: espaço externo (título, labels de eixos, legenda outside)
+// Padding: espaço interno dentro da área de plot (evita dados tocando bordas)
+
+// Criar dados simples
+let data = {
+    "x": [1.0, 2.0, 3.0, 4.0, 5.0],
+    "y": [10.0, 20.0, 30.0, 40.0, 50.0]
+}
+
+let df = dataframe(data)
+
+// 1. Gráfico com margins e padding padrão
+let plot1 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("blue", 2.0)
+    |> gg :: geom_point ("blue", 3.0)
+    |> gg :: labs ("Margins/Padding: Defaults", "X", "Y")
+let svg1 = gg :: render_svg (plot1)
+write (svg1 , "margins_padding_defaults.svg")
+
+// 2. Gráfico com margins personalizados (usando set_margins_dict)
+let plot2 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("red", 2.0)
+    |> gg :: geom_point ("red", 3.0)
+    |> gg :: set_margins_dict ({"top": 100, "bottom": 80, "left": 80, "right": 40})
+    |> gg :: labs ("Margins: Custom (set_margins_dict)", "X", "Y")
+let svg2 = gg :: render_svg (plot2)
+write (svg2 , "margins_custom.svg")
+
+// 3. Gráfico com padding personalizado (usando set_padding_dict)
+let plot3 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("green", 2.0)
+    |> gg :: geom_point ("green", 3.0)
+    |> gg :: set_padding_dict ({"top": 30, "bottom": 30, "left": 30, "right": 30})
+    |> gg :: labs ("Padding: Custom (set_padding_dict)", "X", "Y")
+let svg3 = gg :: render_svg (plot3)
+write (svg3 , "padding_custom.svg")
+
+// 4. Gráfico com margins e padding personalizados (parciais)
+let plot4 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("purple", 2.0)
+    |> gg :: geom_point ("purple", 3.0)
+    |> gg :: set_margins_dict ({"top": 120, "left": 100})
+    |> gg :: set_padding_dict ({"top": 20, "right": 20})
+    |> gg :: labs ("Margins + Padding: Custom (parciais)", "X", "Y")
+let svg4 = gg :: render_svg (plot4)
+write (svg4 , "margins_padding_custom.svg")
+
+// 5. Gráfico usando set_margins tradicional (parâmetros individuais)
+let plot5 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("orange", 2.0)
+    |> gg :: geom_point ("orange", 3.0)
+    |> gg :: set_margins (80, 80, 80, 40)
+    |> gg :: labs ("Margins: set_margins (parâmetros)", "X", "Y")
+let svg5 = gg :: render_svg (plot5)
+write (svg5 , "margins_traditional.svg")
+
+// 6. Gráfico usando set_padding tradicional (parâmetros individuais)
+let plot6 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("magenta", 2.0)
+    |> gg :: geom_point ("magenta", 3.0)
+    |> gg :: set_padding (20, 20, 20, 20)
+    |> gg :: labs ("Padding: set_padding (parâmetros)", "X", "Y")
+let svg6 = gg :: render_svg (plot6)
+write (svg6 , "padding_traditional.svg")
+
+// 7. Gráfico com zero padding (dados tocando bordas da área de plot)
+let plot7 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("cyan", 2.0)
+    |> gg :: geom_point ("cyan", 3.0)
+    |> gg :: set_padding_dict ({"top": 0, "bottom": 0, "left": 0, "right": 0})
+    |> gg :: labs ("Padding: Zero (dados nas bordas)", "X", "Y")
+let svg7 = gg :: render_svg (plot7)
+write (svg7 , "padding_zero.svg")
+
+// 8. Gráfico com zero margins (área de plot ocupa todo o SVG)
+let plot8 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("black", 2.0)
+    |> gg :: geom_point ("black", 3.0)
+    |> gg :: set_margins_dict ({"top": 0, "bottom": 0, "left": 0, "right": 0})
+    |> gg :: labs ("Margins: Zero (área total)", "X", "Y")
+let svg8 = gg :: render_svg (plot8)
+write (svg8 , "margins_zero.svg")
+
+// 9. Gráfico com zero margins e zero padding (sem espaçamento nenhum)
+let plot9 = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_line ("brown", 2.0)
+    |> gg :: geom_point ("brown", 3.0)
+    |> gg :: set_margins_dict ({"top": 0, "bottom": 0, "left": 0, "right": 0})
+    |> gg :: set_padding_dict ({"top": 0, "bottom": 0, "left": 0, "right": 0})
+    |> gg :: labs ("Margins + Padding: Zero (sem espaçamento)", "X", "Y")
+let svg9 = gg :: render_svg (plot9)
+write (svg9 , "margins_padding_zero.svg")
