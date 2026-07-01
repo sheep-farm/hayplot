@@ -2,23 +2,24 @@ import("sheep-farm/hayplot" as= gg)
 
 // Demonstração de múltiplas séries (NOVO v1.3.0)
 // Este exemplo mostra como plotar múltiplas séries no mesmo gráfico
-// Útil para visualizações como DiD (Difference-in-Differences)
 
-// Nota: Este exemplo requer dados externos para funcionar
-// Para testar, use seu próprio dataset com múltiplas colunas no eixo x
+// Criar dados simples com duas colunas x e uma coluna y
+let data = {
+    "x1": [1.0, 2.0, 3.0, 4.0, 5.0],
+    "x2": [1.5, 2.5, 3.5, 4.5, 5.5],
+    "y": [10.0, 20.0, 30.0, 40.0, 50.0]
+}
 
-// Exemplo de uso com dataset real:
-// let df = load("seu_dataset.dta")
-// let plot = gg :: hayplot (df , {"x": ["col1", "col2"], "y": "col_y"})
-//     |> gg :: geom_line ("auto", 2.0)
-//     |> gg :: geom_point ("auto", 3.0)
-// let svg = gg :: render_svg (plot)
-// write (svg , "did_test.svg")
+let df = dataframe(data)
 
-// Exemplo de sintaxe:
-// - x: lista de colunas ["col1", "col2", ...] para múltiplas séries
-// - y: coluna única para eixo y comum
-// - color: "auto" usa paleta automática de 8 cores
-// - color: "blue" usa mesma cor para todas as séries
+// Plot com múltiplas séries x usando cores automáticas
+// x: lista de colunas ["x1", "x2"] para múltiplas séries
+// y: coluna única para eixo y comum
+// color: "auto" usa paleta automática de 8 cores
+let plot = gg :: hayplot (df , {"x": ["x1", "x2"], "y": "y"})
+    |> gg :: geom_line ("auto", 2.0)
+    |> gg :: geom_point ("auto", 3.0)
+    |> gg :: labs ("Multiple Series: Two X Columns", "X Values", "Y")
 
-// Consulte README.md para documentação completa
+let svg = gg :: render_svg (plot)
+write (svg , "multiple_series.svg")
