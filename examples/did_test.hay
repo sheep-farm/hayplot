@@ -1,25 +1,32 @@
 import("sheep-farm/hayplot" as= gg)
 
-// Demonstração de múltiplas séries (NOVO v1.3.0)
-// Este exemplo mostra como plotar múltiplas séries no mesmo gráfico
+// Demonstração de múltiplas séries com configuração personalizada (NOVO v1.3.0)
+// Este exemplo mostra como configurar cada série individualmente
 
 // Criar dados simples com duas colunas x e uma coluna y
 let data = {
-    "x1": [ 1.0,  2.0,  3.0,  4.0,  5.0],
-    "x2": [ 1.5,  2.5,  3.5,  4.5,  5.5],
-    "y":  [10.0, 20.0, 30.0, 40.0, 50.0]
+    "x1": [1.0, 2.0, 3.0, 4.0, 5.0],
+    "x2": [1.5, 2.5, 3.5, 4.5, 5.5],
+    "y": [10.0, 20.0, 30.0, 40.0, 50.0]
 }
 
 let df = dataframe(data)
 
-// Plot com múltiplas séries x usando cores automáticas
-// x: string separada por vírgulas "x1,x2" para múltiplas séries
-// y: coluna única para eixo y comum
-// color: "auto" usa paleta automática de 8 cores
-let plot = gg :: hayplot (df , {"x": "x1,x2", "y": "y"})
+// Plot 1: cores automáticas (padrão)
+let plot1 = gg :: hayplot (df , {"x": "x1,x2", "y": "y"})
     |> gg :: geom_line ("auto", 2.0)
     |> gg :: geom_point ("auto", 3.0)
-    |> gg :: labs ("Multiple Series: Two X Columns", "X Values", "Y")
+    |> gg :: labs ("Auto Colors", "X Values", "Y")
 
-let svg = gg :: render_svg (plot)
-write (svg , "multiple_series.svg")
+let svg1 = gg :: render_svg (plot1)
+write (svg1 , "series_auto.svg")
+
+// Plot 2: cores customizadas por série
+let plot2 = gg :: hayplot (df , {"x": "x1,x2", "y": "y"})
+    |> gg :: set_series_config ({"x1": {"color": "blue", "size": 2.0}, "x2": {"color": "red", "size": 4.0}})
+    |> gg :: geom_line ("auto", 2.0)
+    |> gg :: geom_point ("auto", 3.0)
+    |> gg :: labs ("Custom Series Config", "X Values", "Y")
+
+let svg2 = gg :: render_svg (plot2)
+write (svg2 , "series_custom.svg")
