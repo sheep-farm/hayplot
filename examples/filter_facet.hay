@@ -1,0 +1,41 @@
+// Manual Faceting Example using filter_data
+// Run this from the root of the hayplot repository:
+// hay examples/filter_facet.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a dataset with groups
+let data = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0], "y": [10.0, 20.0, 30.0, 15.0, 25.0, 35.0, 12.0, 22.0, 32.0], "group": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0]}
+let df = dataframe(data)
+
+// 2. Filter data for group 1 and render
+print("Rendering group 1...")
+let df1 = gg::filter_data(df, "group", 1.0)
+let plot1 = gg::hayplot(df1, {"x": "x", "y": "y"})
+        |> gg::geom_point("blue", 5.0)
+        |> gg::geom_line("red", 2.0)
+        |> gg::labs("Group 1", "X", "Y")
+let svg1 = gg::render_svg(plot1)
+write(svg1, "facet_group_1.svg")
+
+// 3. Filter data for group 2 and render
+print("Rendering group 2...")
+let df2 = gg::filter_data(df, "group", 2.0)
+let plot2 = gg::hayplot(df2, {"x": "x", "y": "y"})
+        |> gg::geom_point("green", 5.0)
+        |> gg::geom_line("orange", 2.0)
+        |> gg::labs("Group 2", "X", "Y")
+let svg2 = gg::render_svg(plot2)
+write(svg2, "facet_group_2.svg")
+
+// 4. Filter data for group 3 and render
+print("Rendering group 3...")
+let df3 = gg::filter_data(df, "group", 3.0)
+let plot3 = gg::hayplot(df3, {"x": "x", "y": "y"})
+        |> gg::geom_point("purple", 5.0)
+        |> gg::geom_line("magenta", 2.0)
+        |> gg::labs("Group 3", "X", "Y")
+let svg3 = gg::render_svg(plot3)
+write(svg3, "facet_group_3.svg")
+
+print("All facet plots saved successfully!")

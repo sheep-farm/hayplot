@@ -1,9 +1,10 @@
 use hayashi_plugin_sdk::{hayashi_fn, hayashi_plugin};
-use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, StructArray};
+use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, Float64Array, Int64Array, StructArray};
 use hayashi_plugin_sdk::arrow::datatypes::DataType;
 use hayashi_plugin_sdk::value::{HayashiValue, FromHayashi, IntoHayashi};
 use plotters::prelude::*;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 // Exposes dynamic library C ABI deallocation hooks
 hayashi_plugin!();
@@ -274,27 +275,97 @@ pub fn scale_y_log10(
     plot
 }
 
-/// 15. facet_wrap(plot, group_col)
-/// DISABLED: Faceting requires architectural changes to support plot cloning safely.
-/// This function is temporarily non-functional and will be re-implemented in a future version.
+/// 15. filter_data(df, col, value)
+/// Filters a DataFrame to only include rows where the specified column equals the given value.
+/// This is a simplified approach to faceting - filter data manually, then call hayplot for each group.
+#[hayashi_fn]
+pub fn filter_data(
+    df_hayashi: HayashiValue,
+    col: String,
+    value: f64
+) -> Result<HayashiValue, String> {
+    // Import the DataFrame from HayashiValue
+    let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_hayashi)
+        .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
+
+    let struct_arr = df_arr.as_any()
+        .downcast_ref::<StructArray>()
+        .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
+
+    // Extract the filter column
+    let filter_values = extract_column_f64(struct_arr, &col)?;
+
+    // Create a boolean mask for filtering
+    let mask: Vec<bool> = filter_values.iter()
+        .map(|&v| !v.is_nan() && (v - value).abs() < 1e-9)
+        .collect();
+
+    // Filter each column in the struct array
+    let mut filtered_columns = Vec::new();
+    let mut filtered_fields = Vec::new();
+
+    for (field_idx, field) in struct_arr.fields().iter().enumerate() {
+        let col_array = struct_arr.column(field_idx);
+
+        // Filter the column based on the mask
+        let filtered_array = filter_array_by_mask(col_array, &mask)
+            .map_err(|e| format!("Failed to filter column '{}': {}", field.name(), e))?;
+
+        filtered_fields.push(field.clone());
+        filtered_columns.push(filtered_array);
+    }
+
+    // Create a new StructArray with filtered columns
+    let filtered_struct = StructArray::new(filtered_fields.into(), filtered_columns, None);
+
+    // Convert back to HayashiValue using into_data() and then through HayashiValue
+    let filtered_array_ref: ArrayRef = Arc::new(filtered_struct);
+    Ok(filtered_array_ref.into_hayashi())
+}
+
+/// Helper function to filter an Arrow array by a boolean mask
+fn filter_array_by_mask(array: &dyn Array, mask: &[bool]) -> Result<ArrayRef, String> {
+    let data_type = array.data_type();
+    
+    if let Some(float_array) = array.as_any().downcast_ref::<Float64Array>() {
+        let values = float_array.values();
+        let filtered: Vec<f64> = values
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mask[*i])
+            .map(|(_, &v)| v)
+            .collect();
+        Ok(Arc::new(Float64Array::from(filtered)) as ArrayRef)
+    } else if let Some(int_array) = array.as_any().downcast_ref::<Int64Array>() {
+        let values = int_array.values();
+        let filtered: Vec<i64> = values
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mask[*i])
+            .map(|(_, &v)| v)
+            .collect();
+        Ok(Arc::new(Int64Array::from(filtered)) as ArrayRef)
+    } else {
+        Err(format!("Unsupported array type for filtering: {:?}", data_type))
+    }
+}
+
+/// 16. facet_wrap(plot, group_col)
+/// DEPRECATED: Use filter_data() instead. This function is kept for compatibility but does nothing.
 #[hayashi_fn]
 pub fn facet_wrap(
     plot: HashMap<String, HayashiValue>,
     _group_col: String
 ) -> HashMap<String, HayashiValue> {
-    // Temporarily disabled - just return the plot unchanged
     plot
 }
 
-/// 16. render_facets(plot)
-/// DISABLED: Faceting requires architectural changes to support plot cloning safely.
-/// This function is temporarily non-functional and will be re-implemented in a future version.
+/// 17. render_facets(plot)
+/// DEPRECATED: Use filter_data() + manual hayplot calls instead. This function renders a single plot.
 #[hayashi_fn]
 pub fn render_facets(
     plot: HashMap<String, HayashiValue>
 ) -> Result<HayashiValue, String> {
-    // TEMPORARY: Just render the plot without any filtering
-    // Faceting will be re-implemented with a different approach in a future version
     let svg_content = render_svg_impl(plot)?;
     Ok(HayashiValue::List(vec![HayashiValue::Str(svg_content)]))
 }

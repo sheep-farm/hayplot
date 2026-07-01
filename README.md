@@ -25,8 +25,9 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
 - `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
 - `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
-- `facet_wrap(plot: Dict, group_col: String) -> Dict`: [DISABLED] Specifies a column for faceting. Temporarily non-functional due to architectural limitations.
-- `render_facets(plot: Dict) -> Result<List<String>, String>`: [DISABLED] Renders separate SVG plots for each group. Temporarily non-functional.
+- `filter_data(df: DataFrame, col: String, value: Float) -> Result<DataFrame, String>`: Filters a DataFrame to rows where `col` equals `value`. Use for manual faceting.
+- `facet_wrap(plot: Dict, group_col: String) -> Dict`: [DEPRECATED] Kept for compatibility. Use `filter_data()` instead.
+- `render_facets(plot: Dict) -> Result<List<String>, String>`: [DEPRECATED] Kept for compatibility. Use `filter_data()` + manual calls instead.
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
@@ -214,7 +215,31 @@ let svg_content = gg::render_svg(plot)
 write(svg_content, "log_scale.svg")
 ```
 
-**Note**: Faceting functions (`facet_wrap`, `render_facets`) are temporarily disabled due to architectural limitations. They will be re-implemented in a future version with a different approach.
+**Manual faceting using filter_data:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0], "y": [10.0, 20.0, 30.0, 15.0, 25.0, 35.0, 12.0, 22.0, 32.0], "group": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0]}
+let df = dataframe(d)
+
+// Filter and render each group manually
+let df1 = gg::filter_data(df, "group", 1.0)
+let plot1 = gg::hayplot(df1, {"x": "x", "y": "y"})
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("red", 2.0)
+    |> gg::labs("Group 1", "X", "Y")
+let svg1 = gg::render_svg(plot1)
+write(svg1, "facet_group_1.svg")
+
+let df2 = gg::filter_data(df, "group", 2.0)
+let plot2 = gg::hayplot(df2, {"x": "x", "y": "y"})
+    |> gg::geom_point("green", 5.0)
+    |> gg::geom_line("orange", 2.0)
+    |> gg::labs("Group 2", "X", "Y")
+let svg2 = gg::render_svg(plot2)
+write(svg2, "facet_group_2.svg")
+```
 
 ## License
 
