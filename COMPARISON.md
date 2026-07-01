@@ -2,7 +2,7 @@
 
 ## Aderência Atual: ~60-65%
 
-Atualizado: v1.3.0 (jul 2026)
+Atualizado: v1.4.0 (jul 2026)
 
 ## ✅ Implementado (Core + Básico + Crítico)
 
@@ -62,7 +62,7 @@ Atualizado: v1.3.0 (jul 2026)
 ### Faceting (0%)
 - ✗ `facet_wrap/grid` funcional (descontinuado por bug, substituído por filter_data)
 
-## 🎯 Múltiplas Séries (NOVO v1.3.0)
+## 🎯 Múltiplas Séries (v1.3.0 - v1.4.0)
 
 Suporte generalista para múltiplas séries no eixo x, habilitando visualizações como DiD:
 
@@ -73,13 +73,27 @@ let plot = gg :: hayplot(df, {"x": "y_control,y_treated", "y": "period"})
     |> gg :: geom_point("auto", 3.0)
 ```
 
-**Implementação:**
+**Implementação (v1.3.0):**
 - `aes` aceita string separada por vírgulas: `{"x": "col1,col2,...", "y": "col_y"}`
 - `geom_point("auto", ...)` e `geom_line("auto", ...)` usam paleta automática
 - Paleta de 8 cores: steel blue, crimson, forest green, dark orange, purple, deep sky blue, hot pink, lime green
 - Geometries point/line: suporte completo a múltiplas séries
 - Outras geometries: usam primeira série (simplificado)
 - coord_flip: não suportado com múltiplas séries
+
+**Configuração por Série (NOVO v1.4.0):**
+- `set_series_config(plot, configs)`: Configuração individual por série
+- configs: `{"series_name": {"color": "blue", "size": 2.0}, ...}`
+- Suporta: `color`, `size` (expandível para `alpha`, `geom`, `dash`, `shape`, `label`)
+- Config tem prioridade sobre paleta automática
+- Séries sem config usam paleta automática
+
+**Exemplo com Config:**
+```text
+let plot = gg :: hayplot(df, {"x": "control,treated", "y": "period"})
+    |> gg :: set_series_config({"control": {"color": "blue", "size": 2.0}, "treated": {"color": "red", "size": 3.0}})
+    |> gg :: geom_line("auto", 2.0)
+```
 
 **Diferença vs ggplot2:**
 - ggplot2 usa `aes(color=group)` com formato long
