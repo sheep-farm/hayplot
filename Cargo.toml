@@ -1,6 +1,6 @@
 [package]
 name = "hayplot"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 description = "A native plotting plugin for Hayashi using Apache Arrow FFI and Plotters"
 license = "MIT"

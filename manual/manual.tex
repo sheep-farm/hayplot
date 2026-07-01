@@ -137,7 +137,7 @@
 \newcommand{\hayplot}{\textbf{hayplot}}
 
 % ── Metadados da versão ─────────────────────────────────────────────────────
-\newcommand{\hayversiontag}{v0.5.0}
+\newcommand{\hayversiontag}{v0.6.0}
 \newcommand{\hayashiversiontag}{0.2.6}
 
 % ============================================================
@@ -805,6 +805,79 @@ let plot = gg::hayplot(df, {"x": "tempo", "y": "preco"})
            |> gg::labs("Mudanças de Preço (Degrau)", "Tempo", "Preço")
 \end{lstlisting}
 
+\section{\texttt{scale\_x\_log10(plot)} --- Escala Logarítmica em X}
+\index{scale\_x\_log10()}
+% ───────────────────────────────────────────────────────────---
+
+Define o eixo $x$ para escala logarítmica base 10. Ideal para dados com crescimento exponencial
+ou ranges muito amplos. Valores não-positivos ($\le 0$) são tratados como \texttt{NaN}.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+scale_x_log10(plot: Dict) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot} & \code{Dict} & A especificação de plot retornada por \code{hayplot()}. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Eixo X em escala logarítmica}]
+let plot = gg::hayplot(df, {"x": "frequencia", "y": "amplitude"})
+           |> gg::geom_point("blue", 5.0)
+           |> gg::scale_x_log10()
+           |> gg::labs("Resposta em Frequência", "Frequência (log10)", "Amplitude")
+\end{lstlisting}
+
+% ───────────────────────────────────────────────────────────---
+\section{\texttt{scale\_y\_log10(plot)} --- Escala Logarítmica em Y}
+\index{scale\_y\_log10()}
+% ───────────────────────────────────────────────────────────---
+
+Define o eixo $y$ para escala logarítmica base 10. Ideal para dados com crescimento exponencial
+ou ranges muito amplos. Valores não-positivos ($\le 0$) são tratados como \texttt{NaN}.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+scale_y_log10(plot: Dict) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot} & \code{Dict} & A especificação de plot retornada por \code{hayplot()}. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Eixo Y em escala logarítmica}]
+let plot = gg::hayplot(df, {"x": "tempo", "y": "valor"})
+           |> gg::geom_line("red", 2.0)
+           |> gg::scale_y_log10()
+           |> gg::labs("Crescimento Exponencial", "Tempo", "Valor (log10)")
+\end{lstlisting}
+
+\begin{tipbox}[title={\textbf{Dica:} Cores hexadecimais}]
+  Todos os parâmetros de cor aceitam tanto cores nomeadas (\code{"red"}, \code{"blue"}, etc.)
+  quanto códigos hexadecimais no formato \code{\#RRGGBB} (ex: \code{"\#FF5733"}, \code{"\#C70039"}).
+  Isso permite especificar cores personalizadas com precisão.
+\end{tipbox}
+
+% ─────────────────────────────────────────────────────────---
+
 % ────────────────────────────────────────────────────────────
 \section{\texttt{labs(plot, title, x, y)} --- Rótulos}
 \index{labs()}
@@ -1288,6 +1361,31 @@ write(svg_content, "step_chart.svg")
 print("Plot saved to 'step_chart.svg'!")
 \end{lstlisting}
 
+\section{Escala Logarítmica}
+\index{exemplo!escala logarítmica}
+
+Visualização de dados exponenciais com escala logarítmica e cores hexadecimais:
+
+\begin{lstlisting}[caption={examples/log\_scale.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados com crescimento exponencial
+let data = {"x": [1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0],
+            "y": [1.0, 100.0, 10000.0, 1000000.0, 100000000.0, 10000000000.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("#FF5733", 5.0)  // Custom hex color
+    |> gg::geom_line("#C70039", 2.0)
+    |> gg::scale_x_log10()
+    |> gg::scale_y_log10()
+    |> gg::labs("Exponential Growth (Log Scale)", "X (log10)", "Y (log10)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "log_scale.svg")
+print("Plot saved to 'log_scale.svg'!")
+\end{lstlisting}
+
 % ============================================================
 \chapter{Arquitetura Técnica}
 % ============================================================
@@ -1443,13 +1541,13 @@ no loop de layers.
     v0.5.0 & \code{geom\_vline} --- linha vertical                               & $\checkmark$ Conclu\'{i}do \\
     v0.5.0 & \code{geom\_abline} --- linha diagonal                               & $\checkmark$ Conclu\'{i}do \\
     v0.5.0 & \code{geom\_step} --- linhas em degrau                              & $\checkmark$ Conclu\'{i}do \\
-    v0.6.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & Planejado \\
-    v0.6.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & Planejado \\
-    v0.6.0 & \code{facet\_wrap} --- painéis por grupo                           & Planejado \\
-    v0.7.0 & Saída PNG (via feature \code{png\_backend})                        & Futuro \\
-    v0.7.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
-    v0.7.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
-    v0.8.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
+    v0.6.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & $\checkmark$ Conclu\'{i}do \\
+    v0.6.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & $\checkmark$ Conclu\'{i}do \\
+    v0.7.0 & \code{facet\_wrap} --- painéis por grupo                           & Planejado \\
+    v0.8.0 & Saída PNG (via feature \code{png\_backend})                        & Futuro \\
+    v0.8.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
+    v0.8.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
+    v0.9.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
     \bottomrule
   \end{tabularx}
 \end{center}
@@ -1476,6 +1574,8 @@ no loop de layers.
     \code{geom\_vline(plot, color, size, xint)}    & \code{Dict, String, Float, Float}  & Adiciona linha vertical em xintercept \\[3pt]
     \code{geom\_abline(plot, color, size, slope, int)} & \code{Dict, String, Float, Float, Float} & Adiciona linha diagonal $y = \text{slope} \cdot x + \text{int}$ \\[3pt]
     \code{geom\_step(plot, color, size, dir)}     & \code{Dict, String, Float, String} & Adiciona linha em degrau (hv/vh) \\[3pt]
+    \code{scale\_x\_log10(plot)}                   & \code{Dict}                         & Define eixo X para escala logarítmica base 10 \\[3pt]
+    \code{scale\_y\_log10(plot)}                   & \code{Dict}                         & Define eixo Y para escala logarítmica base 10 \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule

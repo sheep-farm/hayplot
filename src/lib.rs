@@ -20,6 +20,7 @@ pub fn hayplot(
     plot.insert("mapping".to_string(), HayashiValue::Dict(aes));
     plot.insert("layers".to_string(), HayashiValue::List(vec![]));
     plot.insert("labs".to_string(), HayashiValue::Dict(HashMap::new()));
+    plot.insert("scales".to_string(), HayashiValue::Dict(HashMap::new()));
     plot
 }
 
@@ -248,6 +249,30 @@ pub fn labs(
     plot
 }
 
+/// 13. scale_x_log10(plot)
+/// Sets the x-axis to logarithmic scale (base 10).
+#[hayashi_fn]
+pub fn scale_x_log10(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
+        scales.insert("x_log".to_string(), HayashiValue::Bool(true));
+    }
+    plot
+}
+
+/// 14. scale_y_log10(plot)
+/// Sets the y-axis to logarithmic scale (base 10).
+#[hayashi_fn]
+pub fn scale_y_log10(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
+        scales.insert("y_log".to_string(), HayashiValue::Bool(true));
+    }
+    plot
+}
+
 /// Helper function to extract a column as Vec<f64> from a StructArray
 fn extract_column_f64(struct_arr: &StructArray, name: &str) -> Result<Vec<f64>, String> {
     let col = struct_arr.column_by_name(name)
@@ -277,17 +302,33 @@ fn extract_column_f64(struct_arr: &StructArray, name: &str) -> Result<Vec<f64>, 
     Ok(values)
 }
 
-/// Helper function to parse colors from string names
+/// Helper function to parse colors from string names or hex codes
 fn parse_color(name: &str) -> ShapeStyle {
-    let base_color = match name.to_lowercase().as_str() {
-        "red" => RED,
-        "blue" => BLUE,
-        "green" => GREEN,
-        "yellow" => YELLOW,
-        "magenta" => MAGENTA,
-        "cyan" => CYAN,
-        "black" => BLACK,
-        _ => BLUE, // Default to blue
+    let base_color = if name.starts_with('#') {
+        // Parse hex color #RRGGBB
+        let hex = name.trim_start_matches('#');
+        if hex.len() == 6 {
+            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            RGBColor(r, g, b)
+        } else {
+            // Invalid hex, default to blue
+            BLUE
+        }
+    } else {
+        // Parse named colors
+        match name.to_lowercase().as_str() {
+            "red" => RED,
+            "blue" => BLUE,
+            "green" => GREEN,
+            "yellow" => YELLOW,
+            "magenta" => MAGENTA,
+            "cyan" => CYAN,
+            "black" => BLACK,
+            "white" => WHITE,
+            _ => BLUE, // Default to blue
+        }
     };
     base_color.filled()
 }
@@ -332,16 +373,18 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
     // 3. Extract data values
     let x_values = extract_column_f64(struct_arr, x_col_name)?;
     let y_values = extract_column_f64(struct_arr, y_col_name)?;
-    
+
     if x_values.len() != y_values.len() {
         return Err("Coordinates 'x' and 'y' must have the same length".to_string());
     }
-    
-    // 4. Resolve labels
+
+    // 4. Resolve labels and scales
     let mut title = "".to_string();
     let mut x_label = x_col_name.clone();
     let mut y_label = y_col_name.clone();
-    
+    let mut x_log = false;
+    let mut y_log = false;
+
     if let Some(HayashiValue::Dict(labs)) = plot.get("labs") {
         if let Some(HayashiValue::Str(t)) = labs.get("title") {
             title = t.clone();
@@ -353,20 +396,42 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
             y_label = yl.clone();
         }
     }
-    
-    // 5. Compute range limits
+
+    if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+        if let Some(HayashiValue::Bool(true)) = scales.get("x_log") {
+            x_log = true;
+        }
+        if let Some(HayashiValue::Bool(true)) = scales.get("y_log") {
+            y_log = true;
+        }
+    }
+
+    // 5. Apply log transformation if needed
+    let x_values: Vec<f64> = if x_log {
+        x_values.iter().map(|&v| if v.is_nan() || v <= 0.0 { f64::NAN } else { v.log10() }).collect()
+    } else {
+        x_values
+    };
+
+    let y_values: Vec<f64> = if y_log {
+        y_values.iter().map(|&v| if v.is_nan() || v <= 0.0 { f64::NAN } else { v.log10() }).collect()
+    } else {
+        y_values
+    };
+
+    // 6. Compute range limits
     let x_min = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
     let x_max = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
     let y_min = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
     let y_max = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    
+
     // Handle empty or constant coordinate boundaries
     let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.1 - 1.0 };
     let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.1 + 1.0 };
     let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
     let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
     
-    // 6. Render plot into an in-memory SVG string buffer
+    // 7. Render plot into an in-memory SVG string buffer
     let mut svg_buffer = String::new();
     {
         let root = SVGBackend::with_string(&mut svg_buffer, (800, 600)).into_drawing_area();

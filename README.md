@@ -23,8 +23,12 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_vline(plot: Dict, color: String, size: Float, xintercept: Float) -> Dict`: Appends a vertical reference line at xintercept.
 - `geom_abline(plot: Dict, color: String, size: Float, slope: Float, intercept: Float) -> Dict`: Appends a diagonal reference line (y = slope * x + intercept).
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
+- `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
+- `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
+
+**Color Specification**: All color parameters accept both named colors (e.g., "red", "blue", "green") and hex codes (e.g., "#FF5733", "#C70039").
 
 ## How to Install
 
@@ -187,6 +191,25 @@ let plot = gg::hayplot(df, {"x": "time", "y": "price"})
 
 let svg_content = gg::render_svg(plot)
 write(svg_content, "step_chart.svg")
+```
+
+**Logarithmic scale with custom hex colors:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"x": [1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0], "y": [1.0, 100.0, 10000.0, 1000000.0, 100000000.0, 10000000000.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("#FF5733", 5.0)  // Custom hex color
+    |> gg::geom_line("#C70039", 2.0)
+    |> gg::scale_x_log10()
+    |> gg::scale_y_log10()
+    |> gg::labs("Exponential Growth (Log Scale)", "X (log10)", "Y (log10)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "log_scale.svg")
 ```
 
 ## License
