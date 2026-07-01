@@ -137,7 +137,7 @@
 \newcommand{\hayplot}{\textbf{hayplot}}
 
 % ── Metadados da versão ─────────────────────────────────────────────────────
-\newcommand{\hayversiontag}{v0.7.1}
+\newcommand{\hayversiontag}{v0.8.0}
 \newcommand{\hayashiversiontag}{0.2.6}
 
 % ============================================================
@@ -877,6 +877,51 @@ let plot = gg::hayplot(df, {"x": "tempo", "y": "valor"})
 \end{tipbox}
 
 % ─────────────────────────────────────────────────────────---
+\section{\texttt{filter\_data(df, col, value)} --- Filtragem de Dados}
+\index{filter\_data()}
+% ─────────────────────────────────────────────────────────---
+
+Filtra um DataFrame para incluir apenas as linhas onde a coluna especificada é igual ao valor dado.
+Esta é uma abordagem simplificada de faceting — filtre os dados manualmente, depois chame \code{hayplot} para cada grupo.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+filter_data(df: DataFrame, col: String, value: Float) -> Result<DataFrame, String>
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{df}      & \code{DataFrame} & O DataFrame a ser filtrado. \\[4pt]
+  \code{col}     & \code{String}   & Nome da coluna numérica usada para filtragem. \\[4pt]
+  \code{value}   & \code{Float}    & Valor para igualar (tolerância de 1e-9). \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+Um novo DataFrame contendo apenas as linhas onde \code{col == value}.
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Faceting manual com filter\_data}]
+let df1 = gg::filter_data(df, "categoria", 1.0)
+let plot1 = gg::hayplot(df1, {"x": "tempo", "y": "valor"})
+           |> gg::geom_point("blue", 5.0)
+           |> gg::labs("Categoria 1", "Tempo", "Valor")
+let svg1 = gg::render_svg(plot1)
+\end{lstlisting}
+
+\begin{tipbox}[title={\textbf{Nota:} Faceting manual}]
+  Para faceting, filtre os dados usando \code{filter\_data()} para cada grupo e chame \code{hayplot} manualmente.
+  As funções \code{facet\_wrap} e \code{render\_facets} foram descontinuadas em favor desta abordagem.
+\end{tipbox}
+
+% ─────────────────────────────────────────────────────────---
 
 % ────────────────────────────────────────────────────────────
 \section{\texttt{labs(plot, title, x, y)} --- Rótulos}
@@ -1386,6 +1431,48 @@ write(svg_content, "log_scale.svg")
 print("Plot saved to 'log_scale.svg'!")
 \end{lstlisting}
 
+\section{Faceting Manual}
+\index{exemplo!faceting manual}
+
+Visualização de dados agrupados usando filtragem manual de dados:
+
+\begin{lstlisting}[caption={examples/filter\_facet.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados com grupos
+let data = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0],
+            "y": [10.0, 20.0, 30.0, 15.0, 25.0, 35.0, 12.0, 22.0, 32.0],
+            "group": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0]}
+let df = dataframe(data)
+
+// Filtrar e renderizar cada grupo manualmente
+let df1 = gg::filter_data(df, "group", 1.0)
+let plot1 = gg::hayplot(df1, {"x": "x", "y": "y"})
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("red", 2.0)
+    |> gg::labs("Group 1", "X", "Y")
+let svg1 = gg::render_svg(plot1)
+write(svg1, "facet_group_1.svg")
+
+let df2 = gg::filter_data(df, "group", 2.0)
+let plot2 = gg::hayplot(df2, {"x": "x", "y": "y"})
+    |> gg::geom_point("green", 5.0)
+    |> gg::geom_line("orange", 2.0)
+    |> gg::labs("Group 2", "X", "Y")
+let svg2 = gg::render_svg(plot2)
+write(svg2, "facet_group_2.svg")
+
+let df3 = gg::filter_data(df, "group", 3.0)
+let plot3 = gg::hayplot(df3, {"x": "x", "y": "y"})
+    |> gg::geom_point("purple", 5.0)
+    |> gg::geom_line("magenta", 2.0)
+    |> gg::labs("Group 3", "X", "Y")
+let svg3 = gg::render_svg(plot3)
+write(svg3, "facet_group_3.svg")
+
+print("All facet plots saved successfully!")
+\end{lstlisting}
+
 % ============================================================
 \chapter{Arquitetura Técnica}
 % ============================================================
@@ -1543,7 +1630,8 @@ no loop de layers.
     v0.5.0 & \code{geom\_step} --- linhas em degrau                              & $\checkmark$ Conclu\'{i}do \\
     v0.6.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & $\checkmark$ Conclu\'{i}do \\
     v0.6.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & $\checkmark$ Conclu\'{i}do \\
-    v0.7.1 & \code{facet\_wrap}, \code{render\_facets} --- painéis por grupo  & $\times$ Desabilitado (arquitetura) \\
+    v0.8.0 & \code{filter\_data} --- filtragem de DataFrames                    & $\checkmark$ Conclu\'{i}do \\
+    v0.8.0 & \code{facet\_wrap}, \code{render\_facets} --- descontinuados        & $\checkmark$ Substituídos por \code{filter\_data} \\
     v0.8.0 & Saída PNG (via feature \code{png\_backend})                        & Planejado \\
     v0.8.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
     v0.8.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
@@ -1576,6 +1664,7 @@ no loop de layers.
     \code{geom\_step(plot, color, size, dir)}     & \code{Dict, String, Float, String} & Adiciona linha em degrau (hv/vh) \\[3pt]
     \code{scale\_x\_log10(plot)}                   & \code{Dict}                         & Define eixo X para escala logarítmica base 10 \\[3pt]
     \code{scale\_y\_log10(plot)}                   & \code{Dict}                         & Define eixo Y para escala logarítmica base 10 \\[3pt]
+    \code{filter\_data(df, col, value)}           & \code{DataFrame, String, Float}     & Filtra DataFrame onde col == value \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule
@@ -1584,9 +1673,9 @@ no loop de layers.
 
 \bigskip
 
-\begin{alertbox}[title={\textbf{Nota:} Faceting desabilitado}]
-  As funções \code{facet\_wrap} e \code{render\_facets} foram desabilitadas na v0.7.1 devido a limitações arquiteturais.
-  Elas serão reimplementadas em uma versão futura com uma abordagem diferente.
+\begin{alertbox}[title={\textbf{Nota:} Faceting descontinuado}]
+  As funções \code{facet\_wrap} e \code{render\_facets} foram descontinuadas na v0.8.0.
+  Use \code{filter\_data()} para filtrar DataFrames manualmente e chame \code{hayplot} para cada grupo.
 \end{alertbox}
 
 \bigskip
