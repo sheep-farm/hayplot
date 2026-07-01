@@ -359,6 +359,23 @@ pub fn draw_element(
     plot
 }
 
+/// 16.6. show_legend(plot)
+/// Enables automatic legend display for the plot.
+/// Legend shows series names and colors when multiple series are plotted.
+#[hayashi_fn]
+pub fn show_legend(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("show_legend".to_string(), HayashiValue::Bool(true));
+    } else {
+        let mut spec = HashMap::new();
+        spec.insert("show_legend".to_string(), HayashiValue::Bool(true));
+        plot.insert("spec".to_string(), HayashiValue::Dict(spec));
+    }
+    plot
+}
+
 /// 17. filter_data(df, col, value)
 /// Filters a DataFrame to only include rows where the specified column equals the given value.
 /// This is a simplified approach to faceting - filter data manually, then call hayplot for each group.
@@ -2195,6 +2212,78 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                     }
                 }
             }
+        }
+    }
+    
+    // 12. Draw legend if enabled and multiple series exist
+    let show_legend = if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
+        spec.get("show_legend").and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        }).unwrap_or(false)
+    } else {
+        false
+    };
+    
+    let legend_svg = if show_legend && x_series.len() > 1 {
+        // Simple legend rendering in top-right corner
+        let legend_x = width as i32 - 150;
+        let legend_y = 80;
+        let legend_box_y = legend_y - 10;
+        let legend_box_height = (x_series.len() * 25) as i32 + 20;
+        
+        let mut legend_html = String::new();
+        
+        // Draw legend background box
+        legend_html.push_str(&format!(
+            "<rect x=\"{}\" y=\"{}\" width=\"140\" height=\"{}\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" opacity=\"0.9\"/>\n",
+            legend_x, legend_box_y, legend_box_height
+        ));
+        
+        // Draw legend items
+        for (idx, series_name) in x_series.iter().enumerate() {
+            let item_y = legend_y + (idx * 25) as i32;
+            
+            // Get color for this series
+            let series_color = if let Some(ref configs) = series_config {
+                if let Some(ref config) = configs.get(series_name) {
+                    if let Some(HayashiValue::Str(c)) = config.get("color") {
+                        c.clone()
+                    } else {
+                        format!("#{:02X}{:02X}{:02X}", 
+                            get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
+                    }
+                } else {
+                    format!("#{:02X}{:02X}{:02X}", 
+                        get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
+                }
+            } else {
+                format!("#{:02X}{:02X}{:02X}", 
+                    get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
+            };
+            
+            // Draw color box
+            legend_html.push_str(&format!(
+                "<rect x=\"{}\" y=\"{}\" width=\"15\" height=\"15\" fill=\"{}\" stroke=\"black\" stroke-width=\"1\"/>\n",
+                legend_x + 10, item_y - 12, series_color
+            ));
+            
+            // Draw series name text
+            legend_html.push_str(&format!(
+                "<text x=\"{}\" y=\"{}\" font-family=\"sans-serif\" font-size=\"12\" fill=\"black\">{}</text>\n",
+                legend_x + 35, item_y, series_name
+            ));
+        }
+        
+        Some(legend_html)
+    } else {
+        None
+    };
+    
+    // Insert legend before closing </svg> tag
+    if let Some(legend_html) = legend_svg {
+        if let Some(pos) = svg_buffer.rfind("</svg>") {
+            svg_buffer.insert_str(pos, &legend_html);
         }
     }
     
