@@ -1,0 +1,13 @@
+// aes_color test: color points by a categorical column
+// Each unique value in "species" gets a different color from the palette
+
+let df = df_read_csv("data/iris.csv")
+
+let plot = gg::hayplot(df, {"x": "sepal_length", "y": "sepal_width"})
+    |> gg::aes_color("species")
+    |> gg::geom_point("auto", 4.0)
+    |> gg::labs("Iris: Sepal Length vs Width", "Sepal Length", "Sepal Width")
+    |> gg::show_legend("right", "outside")
+    |> gg::render_svg()
+
+df_write_file(plot, "output/aes_color_test.svg")

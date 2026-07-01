@@ -39,6 +39,24 @@ pub fn hayplot(
     plot
 }
 
+/// 1b. aes_color(plot, col)
+/// Maps color aesthetic to a data column. Each unique value in the column
+/// gets a different color from the palette. Use instead of fixed color in geoms.
+#[hayashi_fn]
+pub fn aes_color(
+    mut plot: HashMap<String, HayashiValue>,
+    col: String
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("aes_color".to_string(), HayashiValue::Str(col));
+    } else {
+        let mut spec = HashMap::new();
+        spec.insert("aes_color".to_string(), HayashiValue::Str(col));
+        plot.insert("spec".to_string(), HayashiValue::Dict(spec));
+    }
+    plot
+}
+
 /// 2. geom_point(plot, color, size)
 /// Appends a scatter plot geometry layer to the plot spec dictionary.
 #[hayashi_fn]
@@ -1748,6 +1766,29 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             _ => None,
         });
 
+    // 5.6. Extract aes_color mapping (color aesthetic mapped to a data column)
+    // When present, each unique value in the column gets a different color.
+    let aes_color_col: Option<String> = plot.get("spec").and_then(|s| match s {
+        HayashiValue::Dict(d) => d.get("aes_color").and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.clone()),
+            _ => None,
+        }),
+        _ => None,
+    });
+
+    // Extract the grouping column values and map unique values to palette indices
+    let aes_groups: Option<(Vec<String>, Vec<usize>)> = if let Some(ref col) = aes_color_col {
+        let group_values = extract_column_string(struct_arr, col)
+            .map_err(|e| format!("aes_color: {}", e))?;
+        let unique = unique_strings(&group_values);
+        let indices: Vec<usize> = group_values.iter().map(|v| {
+            unique.iter().position(|u| u == v).unwrap_or(0)
+        }).collect();
+        Some((unique, indices))
+    } else {
+        None
+    };
+
     // Swap x and y if coord_flip is true (for multiple series, swap all series)
     let (x_series_values, y_values, x_label, y_label) = if coord_flip {
         // Swap: x becomes y, y becomes first x series (simplified for now)
@@ -1954,28 +1995,41 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     //
     // Layout: vertical (items stacked) for left/right, horizontal (items side
     // by side) for bottom — matching ggplot2 behavior.
-    let legend_dims: Option<(f64, f64)> = if show_legend && x_series.len() > 1 {
+    // Determine legend items: either multiple x-series or aes_color groups
+    let legend_items: Vec<String> = if show_legend {
+        if let Some((ref unique, _)) = aes_groups {
+            unique.clone()
+        } else if x_series.len() > 1 {
+            x_series.clone()
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    let legend_dims: Option<(f64, f64)> = if show_legend && !legend_items.is_empty() {
         let char_width = 7.0;       // approximate pixels per character
         let line_height = 20.0;     // pixels per legend item (vertical layout)
         let box_padding = 10.0;     // padding inside legend box
         let item_gap = 25.0;        // horizontal gap between items (bottom layout)
 
-        let max_name_width = x_series.iter()
+        let max_name_width = legend_items.iter()
             .map(|name| name.len() as f64 * char_width)
             .fold(0.0f64, |a, b| a.max(b));
 
         let (box_width, box_height) = if legend_location == "outside" && legend_position == "bottom" {
             // Horizontal layout: sum of all item widths
-            let total_text: f64 = x_series.iter()
+            let total_text: f64 = legend_items.iter()
                 .map(|name| name.len() as f64 * char_width + 35.0) // color box + text
                 .sum();
-            let box_w = total_text + (x_series.len() - 1) as f64 * item_gap + box_padding * 2.0;
+            let box_w = total_text + (legend_items.len() - 1) as f64 * item_gap + box_padding * 2.0;
             let box_h = line_height + box_padding * 2.0;
             (box_w, box_h)
         } else {
             // Vertical layout (left, right, inside)
             let box_w = max_name_width + 35.0 + 15.0;   // text + margin + color box
-            let box_h = x_series.len() as f64 * line_height + box_padding * 2.0;
+            let box_h = legend_items.len() as f64 * line_height + box_padding * 2.0;
             (box_w, box_h)
         };
 
@@ -2091,11 +2145,19 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                         
                         match geom.as_str() {
                             "point" => {
-                                // Check if single color specified or auto (use palette for multiple series)
-                                let use_auto_color = color_name == "auto" && x_series_values.len() > 1;
-                                
-                                if use_auto_color {
-                                    // Render each x series with different color
+                                if let Some((_, ref group_indices)) = aes_groups {
+                                    // Aesthetic color mapping: each point colored by its group
+                                    let x_vals = &x_series_values[0];
+                                    chart.draw_series(
+                                        x_vals.iter().zip(y_values.iter()).zip(group_indices.iter())
+                                            .filter(|((&x, &y), _)| !x.is_nan() && !y.is_nan())
+                                            .map(|((&x, &y), &gi)| {
+                                                let color = get_series_color(gi).filled();
+                                                Circle::new((x, y), size as i32, color)
+                                            })
+                                    ).map_err(|e| e.to_string())?;
+                                } else if color_name == "auto" && x_series_values.len() > 1 {
+                                    // Auto color: render each x series with different color
                                     for (idx, x_vals) in x_series_values.iter().enumerate() {
                                         let series_name = &x_series[idx];
                                         
@@ -2149,10 +2211,25 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 }
                             }
                             "line" => {
-                                // Similar logic for lines
-                                let use_auto_color = color_name == "auto" && x_series_values.len() > 1;
-                                
-                                if use_auto_color {
+                                if let Some((ref unique_groups, ref group_indices)) = aes_groups {
+                                    // Aesthetic color mapping: draw a separate line per group
+                                    let x_vals = &x_series_values[0];
+                                    for (gi, _group_name) in unique_groups.iter().enumerate() {
+                                        let mut points: Vec<(f64, f64)> = x_vals.iter()
+                                            .zip(y_values.iter())
+                                            .zip(group_indices.iter())
+                                            .filter(|((&x, &y), &g)| !x.is_nan() && !y.is_nan() && g == gi)
+                                            .map(|((&x, &y), _)| (x, y))
+                                            .collect();
+                                        points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                        if points.len() >= 2 {
+                                            chart.draw_series(
+                                                LineSeries::new(points.into_iter(),
+                                                    get_series_color(gi).stroke_width(size as u32))
+                                            ).map_err(|e| e.to_string())?;
+                                        }
+                                    }
+                                } else if color_name == "auto" && x_series_values.len() > 1 {
                                     for (idx, x_vals) in x_series_values.iter().enumerate() {
                                         let series_name = &x_series[idx];
                                         
@@ -2861,7 +2938,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
         let mut cursor_x = legend_box_x as f64 + box_padding;
 
-        for (idx, series_name) in x_series.iter().enumerate() {
+        for (idx, series_name) in legend_items.iter().enumerate() {
             // Get color for this series
             let series_color = if let Some(ref configs) = series_config {
                 if let Some(ref config) = configs.get(series_name) {

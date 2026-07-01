@@ -37,6 +37,7 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `scale_x_continuous(plot: Dict, limits: List, breaks: List, labels: List) -> Dict`: Sets continuous scale options for x-axis: limits, breaks, and labels.
 - `scale_y_continuous(plot: Dict, limits: List, breaks: List, labels: List) -> Dict`: Sets continuous scale options for y-axis: limits, breaks, and labels.
 - `filter_data(df: DataFrame, col: String, value: Float) -> Result<DataFrame, String>`: Filters a DataFrame to rows where `col` equals `value`. Use for manual faceting.
+- `aes_color(plot: Dict, col: String) -> Dict`: Maps color aesthetic to a data column. Each unique value in the column gets a different color from the palette. Use with `geom_point("auto", ...)` or `geom_line("auto", ...)`.
 - `facet_wrap(plot: Dict, facet_col: String, ncol: Int, scales: String) -> Dict`: Creates a wrapped faceted plot. Splits data by unique values of `facet_col`, arranges in a grid with `ncol` columns. scales: "fixed", "free_x", "free_y", "free".
 - `facet_grid(plot: Dict, rows_col: String, cols_col: String, scales: String) -> Dict`: Creates a 2D grid of sub-plots. Rows split by `rows_col`, columns by `cols_col`. scales: "fixed", "free_x", "free_y", "free".
 - `set_dimensions(plot: Dict, width: Int, height: Int) -> Dict`: Sets SVG output dimensions in pixels. Default is 800x600.
@@ -355,6 +356,28 @@ let plot = gg::hayplot(df, {"x": "x", "y": "y"})
 let svg_content = gg::render_svg(plot)
 write(svg_content, "log_scale.svg")
 ```
+
+**Aesthetic color mapping (aes_color):**
+
+Color points by a categorical column — each unique value gets a different color:
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let df = df_read_csv("data/iris.csv")
+
+let plot = gg::hayplot(df, {"x": "sepal_length", "y": "sepal_width"})
+    |> gg::aes_color("species")
+    |> gg::geom_point("auto", 4.0)
+    |> gg::labs("Iris: Sepal Length vs Width", "Sepal Length", "Sepal Width")
+    |> gg::show_legend("right", "outside")
+let svg = gg::render_svg(plot)
+write(svg, "aes_color.svg")
+```
+
+When `aes_color` is set, `geom_point("auto", ...)` colors each point by its
+group, and `geom_line("auto", ...)` draws a separate line per group. The legend
+shows the group names automatically.
 
 **Automatic faceting with facet_wrap:**
 
