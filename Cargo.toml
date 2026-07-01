@@ -1,6 +1,6 @@
 [package]
 name = "hayplot"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "A native plotting plugin for Hayashi using Apache Arrow FFI and Plotters"
 license = "MIT"
@@ -8,12 +8,19 @@ license = "MIT"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = []
+png = ["plotters/bitmap_backend", "base64"]
+
 [dependencies]
 # Depende diretamente do SDK no GitHub
 hayashi-plugin-sdk = { git = "https://github.com/sheep-farm/hayashi-plugin-sdk.git", branch = "main" }
 
 # Plotters sem dependências externas de sistema (freetype/fontconfig) para portabilidade
 plotters = { version = "0.3.7", default-features = false, features = ["svg_backend", "area_series", "line_series"] }
+
+# Base64 encoding for PNG output
+base64 = { version = "0.22", optional = true }
 
 # Álgebra linear leve para regressão e smoothing (para versões futuras)
 # nalgebra = { version = "0.33", default-features = false, features = ["std"] }
