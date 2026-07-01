@@ -877,9 +877,9 @@ pub fn geom_text(
 
 /// 26. scale_x_continuous(plot, limits, breaks, labels)
 /// Sets continuous scale options for x-axis: limits, breaks, and labels.
-/// limits: [min, max] or null
-/// breaks: list of values or null
-/// labels: list of strings or null
+/// limits: [min, max] or empty list
+/// breaks: list of values or empty list
+/// labels: list of strings or empty list
 #[hayashi_fn]
 pub fn scale_x_continuous(
     mut plot: HashMap<String, HayashiValue>,
@@ -888,7 +888,11 @@ pub fn scale_x_continuous(
     labels: HayashiValue
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
-        scales.insert("x_limits".to_string(), limits);
+        // Extract limits from list (handles both List and Arrow types)
+        if let Some((min, max)) = extract_limits_from_value(&limits) {
+            scales.insert("x_limit_min".to_string(), HayashiValue::Float(min));
+            scales.insert("x_limit_max".to_string(), HayashiValue::Float(max));
+        }
         scales.insert("x_breaks".to_string(), breaks);
         scales.insert("x_labels".to_string(), labels);
     }
@@ -905,9 +909,81 @@ pub fn scale_y_continuous(
     labels: HayashiValue
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
-        scales.insert("y_limits".to_string(), limits);
+        if let Some((min, max)) = extract_limits_from_value(&limits) {
+            scales.insert("y_limit_min".to_string(), HayashiValue::Float(min));
+            scales.insert("y_limit_max".to_string(), HayashiValue::Float(max));
+        }
         scales.insert("y_breaks".to_string(), breaks);
         scales.insert("y_labels".to_string(), labels);
+    }
+    plot
+}
+
+/// Helper: extract (min, max) from a HayashiValue that may be List or Arrow
+fn extract_limits_from_value(v: &HayashiValue) -> Option<(f64, f64)> {
+    use hayashi_plugin_sdk::value::FromHayashi;
+    match v {
+        HayashiValue::List(l) if l.len() >= 2 => {
+            let min = match &l[0] { HayashiValue::Float(f) => *f, HayashiValue::Int(i) => *i as f64, _ => return None };
+            let max = match &l[1] { HayashiValue::Float(f) => *f, HayashiValue::Int(i) => *i as f64, _ => return None };
+            Some((min, max))
+        }
+        HayashiValue::Arrow(_, _) => {
+            // Arrow FFI - convert to ArrayRef and extract first two values
+            let arr: ArrayRef = FromHayashi::from_hayashi(v.clone()).ok()?;
+            extract_f64_from_array(&arr, 0).zip(extract_f64_from_array(&arr, 1))
+        }
+        _ => None,
+    }
+}
+
+/// Helper: extract f64 from an Arrow array at a given index
+fn extract_f64_from_array(arr: &dyn Array, idx: usize) -> Option<f64> {
+    use hayashi_plugin_sdk::arrow::array::Float64Array;
+    use hayashi_plugin_sdk::arrow::array::Int64Array;
+    if let Some(a) = arr.as_any().downcast_ref::<Float64Array>() {
+        if !a.is_null(idx) { Some(a.value(idx)) } else { None }
+    } else if let Some(a) = arr.as_any().downcast_ref::<Int64Array>() {
+        if !a.is_null(idx) { Some(a.value(idx) as f64) } else { None }
+    } else { None }
+}
+
+/// 27b. xlim(plot, min, max)
+/// Sets the x-axis limits. Shortcut for scale_x_continuous with only limits.
+#[hayashi_fn]
+pub fn xlim(
+    mut plot: HashMap<String, HayashiValue>,
+    min: f64,
+    max: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
+        scales.insert("x_limit_min".to_string(), HayashiValue::Float(min));
+        scales.insert("x_limit_max".to_string(), HayashiValue::Float(max));
+    } else {
+        let mut scales = HashMap::new();
+        scales.insert("x_limit_min".to_string(), HayashiValue::Float(min));
+        scales.insert("x_limit_max".to_string(), HayashiValue::Float(max));
+        plot.insert("scales".to_string(), HayashiValue::Dict(scales));
+    }
+    plot
+}
+
+/// 27c. ylim(plot, min, max)
+/// Sets the y-axis limits. Shortcut for scale_y_continuous with only limits.
+#[hayashi_fn]
+pub fn ylim(
+    mut plot: HashMap<String, HayashiValue>,
+    min: f64,
+    max: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
+        scales.insert("y_limit_min".to_string(), HayashiValue::Float(min));
+        scales.insert("y_limit_max".to_string(), HayashiValue::Float(max));
+    } else {
+        let mut scales = HashMap::new();
+        scales.insert("y_limit_min".to_string(), HayashiValue::Float(min));
+        scales.insert("y_limit_max".to_string(), HayashiValue::Float(max));
+        plot.insert("scales".to_string(), HayashiValue::Dict(scales));
     }
     plot
 }
@@ -1583,6 +1659,19 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
         let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
         let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
         let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
+
+        // Apply manual scale limits if specified
+        let (x_min, x_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+            let min = scales.get("x_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
+            let max = scales.get("x_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
+            match (min, max) { (Some(mn), Some(mx)) => (mn, mx), _ => (x_min, x_max) }
+        } else { (x_min, x_max) };
+        let (y_min, y_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+            let min = scales.get("y_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
+            let max = scales.get("y_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
+            match (min, max) { (Some(mn), Some(mx)) => (mn, mx), _ => (y_min, y_max) }
+        } else { (y_min, y_max) };
+
         (x_min, x_max, y_min, y_max)
     };
 
@@ -2083,53 +2172,28 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
 
     // 7. Apply scale limits if specified
-    let (x_min, x_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-        if let Some(HayashiValue::List(limits)) = scales.get("x_limits") {
-            if limits.len() >= 2 {
-                let min = match &limits[0] {
-                    HayashiValue::Float(f) => *f,
-                    HayashiValue::Int(i) => *i as f64,
-                    _ => x_min,
-                };
-                let max = match &limits[1] {
-                    HayashiValue::Float(f) => *f,
-                    HayashiValue::Int(i) => *i as f64,
-                    _ => x_max,
-                };
-                (min, max)
-            } else {
-                (x_min, x_max)
-            }
-        } else {
-            (x_min, x_max)
-        }
-    } else {
-        (x_min, x_max)
-    };
+    let manual_x_limits = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+        scales.contains_key("x_limit_min") && scales.contains_key("x_limit_max")
+    } else { false };
+    let manual_y_limits = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+        scales.contains_key("y_limit_min") && scales.contains_key("y_limit_max")
+    } else { false };
 
-    let (y_min, y_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-        if let Some(HayashiValue::List(limits)) = scales.get("y_limits") {
-            if limits.len() >= 2 {
-                let min = match &limits[0] {
-                    HayashiValue::Float(f) => *f,
-                    HayashiValue::Int(i) => *i as f64,
-                    _ => y_min,
-                };
-                let max = match &limits[1] {
-                    HayashiValue::Float(f) => *f,
-                    HayashiValue::Int(i) => *i as f64,
-                    _ => y_max,
-                };
-                (min, max)
-            } else {
-                (y_min, y_max)
-            }
-        } else {
-            (y_min, y_max)
-        }
-    } else {
-        (y_min, y_max)
-    };
+    let (x_min, x_max) = if manual_x_limits {
+        if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+            let min = scales.get("x_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(x_min);
+            let max = scales.get("x_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(x_max);
+            (min, max)
+        } else { (x_min, x_max) }
+    } else { (x_min, x_max) };
+
+    let (y_min, y_max) = if manual_y_limits {
+        if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+            let min = scales.get("y_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(y_min);
+            let max = scales.get("y_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(y_max);
+            (min, max)
+        } else { (y_min, y_max) }
+    } else { (y_min, y_max) };
     
     // 8. Get dimensions from spec or use defaults
     let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
@@ -2357,16 +2421,17 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         
         // Apply padding to axis ranges (internal spacing within plot area)
         // Padding is in pixels, so we need to convert to data coordinates
+        // Skip padding when manual limits are set (user wants exact bounds)
         let plot_width = width as f64 - margin_left as f64 - margin_right as f64;
         let plot_height = height as f64 - margin_top as f64 - margin_bottom as f64;
 
         let x_units_per_pixel = (x_max - x_min) / plot_width;
         let y_units_per_pixel = (y_max - y_min) / plot_height;
 
-        let x_min = x_min + padding_left * x_units_per_pixel;
-        let x_max = x_max - padding_right * x_units_per_pixel;
-        let y_min = y_min + padding_bottom * y_units_per_pixel;
-        let y_max = y_max - padding_top * y_units_per_pixel;
+        let x_min = if manual_x_limits { x_min } else { x_min + padding_left * x_units_per_pixel };
+        let x_max = if manual_x_limits { x_max } else { x_max - padding_right * x_units_per_pixel };
+        let y_min = if manual_y_limits { y_min } else { y_min + padding_bottom * y_units_per_pixel };
+        let y_max = if manual_y_limits { y_max } else { y_max - padding_top * y_units_per_pixel };
 
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())

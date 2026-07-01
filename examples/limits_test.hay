@@ -1,0 +1,35 @@
+// xlim/ylim test: programmatic axis limits
+
+import("sheep-farm/hayplot", as=gg)
+
+let data = {
+    "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+    "y": [10.0, 15.0, 13.0, 20.0, 18.0, 25.0, 22.0, 30.0, 28.0, 35.0]
+}
+let df = dataframe(data)
+
+// xlim + ylim: zoom into a region
+let p1 = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("blue", 2.0)
+    |> gg::labs("xlim/ylim: zoom [3,7] x [12,28]", "X", "Y")
+    |> gg::xlim(3.0, 7.0)
+    |> gg::ylim(12.0, 28.0)
+let svg1 = gg::render_svg(p1)
+write(svg1, "limits_zoom.svg")
+
+// scale_x_continuous with limits only (breaks/labels as empty lists)
+let p2 = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("red", 5.0)
+    |> gg::labs("scale_x_continuous: [2,8]", "X", "Y")
+    |> gg::scale_x_continuous([2.0, 8.0], [], [])
+let svg2 = gg::render_svg(p2)
+write(svg2, "limits_scale_x.svg")
+
+// ylim only (x auto)
+let p3 = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("green", 5.0)
+    |> gg::labs("ylim only: [0,40]", "X", "Y")
+    |> gg::ylim(0.0, 40.0)
+let svg3 = gg::render_svg(p3)
+write(svg3, "limits_ylim_only.svg")
