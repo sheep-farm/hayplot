@@ -374,6 +374,33 @@ pub fn save_svg(
     Ok(HayashiValue::Str(svg_content))
 }
 
+/// 21. set_background_color(plot, color)
+/// Sets the background color of the plot. Default is white.
+/// Accepts named colors (e.g., "white", "black") or hex codes (e.g., "#FFFFFF").
+#[hayashi_fn]
+pub fn set_background_color(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("background_color".to_string(), HayashiValue::Str(color));
+    }
+    plot
+}
+
+/// 22. set_grid(plot, show_grid)
+/// Enables or disables the grid. Default is true.
+#[hayashi_fn]
+pub fn set_grid(
+    mut plot: HashMap<String, HayashiValue>,
+    show_grid: bool
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("show_grid".to_string(), HayashiValue::Bool(show_grid));
+    }
+    plot
+}
+
 /// 19. facet_wrap(plot, group_col)
 /// DEPRECATED: Use filter_data() instead. This function is kept for compatibility but does nothing.
 #[hayashi_fn]
@@ -475,10 +502,40 @@ fn parse_color(name: &str) -> ShapeStyle {
             "cyan" => CYAN,
             "black" => BLACK,
             "white" => WHITE,
-            _ => BLUE, // Default to blue
+            _ => BLUE, // Default to blue for unknown colors
         }
     };
     base_color.filled()
+}
+
+/// Helper function to parse colors from string names or hex codes to RGBColor
+fn parse_color_to_rgb(name: &str) -> RGBColor {
+    if name.starts_with('#') {
+        // Parse hex color #RRGGBB
+        let hex = name.trim_start_matches('#');
+        if hex.len() == 6 {
+            let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
+            let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
+            let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
+            RGBColor(r, g, b)
+        } else {
+            // Invalid hex, default to white
+            WHITE
+        }
+    } else {
+        // Parse named colors
+        match name.to_lowercase().as_str() {
+            "red" => RED,
+            "blue" => BLUE,
+            "green" => GREEN,
+            "yellow" => YELLOW,
+            "magenta" => MAGENTA,
+            "cyan" => CYAN,
+            "black" => BLACK,
+            "white" => WHITE,
+            _ => WHITE, // Default to white for background
+        }
+    }
 }
 
 /// 4. render_svg(plot)
@@ -622,11 +679,34 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         (20, 20, 20, 20)
     };
 
-    // 9. Render plot into an in-memory SVG string buffer
+    // 9. Get background color from spec or use default (white)
+    let background_color_name = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("background_color").and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.clone()),
+            _ => None,
+        }).unwrap_or_else(|| "white".to_string())
+    } else {
+        "white".to_string()
+    };
+
+    // 10. Get grid setting from spec or use default (true)
+    let show_grid = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("show_grid").and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        }).unwrap_or(true)
+    } else {
+        true
+    };
+
+    // 11. Render plot into an in-memory SVG string buffer
     let mut svg_buffer = String::new();
     {
         let root = SVGBackend::with_string(&mut svg_buffer, (width, height)).into_drawing_area();
-        root.fill(&WHITE).map_err(|e| e.to_string())?;
+        
+        // Parse and apply background color (convert to RGBColor)
+        let bg_rgb = parse_color_to_rgb(&background_color_name);
+        root.fill(&bg_rgb).map_err(|e| e.to_string())?;
         
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
@@ -639,11 +719,21 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             .build_cartesian_2d(x_min..x_max, y_min..y_max)
             .map_err(|e| e.to_string())?;
             
-        chart.configure_mesh()
-            .x_desc(x_label)
-            .y_desc(y_label)
-            .draw()
-            .map_err(|e| e.to_string())?;
+        if show_grid {
+            chart.configure_mesh()
+                .x_desc(x_label)
+                .y_desc(y_label)
+                .draw()
+                .map_err(|e| e.to_string())?;
+        } else {
+            chart.configure_mesh()
+                .x_desc(x_label)
+                .y_desc(y_label)
+                .disable_x_mesh()
+                .disable_y_mesh()
+                .draw()
+                .map_err(|e| e.to_string())?;
+        }
             
         // Draw layers sequentially
         if let Some(HayashiValue::List(layers)) = plot.get("layers") {

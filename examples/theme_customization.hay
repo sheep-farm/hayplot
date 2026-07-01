@@ -1,0 +1,41 @@
+// Theme Customization Example
+// Run this from the root of the hayplot repository:
+// hay examples/theme_customization.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// Create a simple dataset
+let data = {"x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [10.0, 20.0, 15.0, 25.0, 30.0]}
+let df = dataframe(data)
+
+// Dark theme with grid disabled
+let plot_dark = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_background_color("black")
+    |> gg::set_grid(false)
+    |> gg::geom_point("white", 5.0)
+    |> gg::geom_line("cyan", 2.0)
+    |> gg::labs("Dark Theme (No Grid)", "X", "Y")
+let svg_dark = gg::render_svg(plot_dark)
+write(svg_dark, "plot_dark_nogrid.svg")
+
+// Light gray background with grid
+let plot_gray = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_background_color("#F0F0F0")
+    |> gg::set_grid(true)
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("red", 2.0)
+    |> gg::labs("Light Gray Theme", "X", "Y")
+let svg_gray = gg::render_svg(plot_gray)
+write(svg_gray, "plot_gray_grid.svg")
+
+// Custom hex background with grid
+let plot_custom = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_background_color("#FFE4E1")  // Misty rose
+    |> gg::set_grid(true)
+    |> gg::geom_point("red", 5.0)
+    |> gg::geom_line("darkred", 2.0)
+    |> gg::labs("Custom Hex Background", "X", "Y")
+let svg_custom = gg::render_svg(plot_custom)
+write(svg_custom, "plot_custom.svg")
+
+print("All theme customizations saved successfully!")
