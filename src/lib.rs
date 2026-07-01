@@ -1106,10 +1106,10 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
     let y_max = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
     
     // Handle empty or constant coordinate boundaries
-    let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.1 - 1.0 };
-    let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.1 + 1.0 };
-    let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
-    let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
+    let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.05 };
+    let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
+    let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
+    let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
     
     // Get dimensions from spec or use defaults
     let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
@@ -1579,10 +1579,10 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
             .filter(|&&v| !v.is_nan())
             .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
-        let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.1 - 1.0 };
-        let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.1 + 1.0 };
-        let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
-        let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
+        let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.05 };
+        let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
+        let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
+        let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
         (x_min, x_max, y_min, y_max)
     };
 
@@ -1649,8 +1649,8 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                     .flat_map(|s| s.iter())
                     .filter(|&&v| !v.is_nan())
                     .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-                let xmin = if xmin.is_infinite() { 0.0 } else { xmin - (xmax - xmin).abs() * 0.1 - 1.0 };
-                let xmax = if xmax.is_infinite() { 10.0 } else { xmax + (xmax - xmin).abs() * 0.1 + 1.0 };
+                let xmin = if xmin.is_infinite() { 0.0 } else { xmin - (xmax - xmin).abs() * 0.05 };
+                let xmax = if xmax.is_infinite() { 10.0 } else { xmax + (xmax - xmin).abs() * 0.05 };
                 (xmin, xmax)
             } else {
                 (global_x_min, global_x_max)
@@ -1663,8 +1663,8 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                 let ymax = panel.y_values.iter()
                     .filter(|&&v| !v.is_nan())
                     .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-                let ymin = if ymin.is_infinite() { 0.0 } else { ymin - (ymax - ymin).abs() * 0.1 - 1.0 };
-                let ymax = if ymax.is_infinite() { 10.0 } else { ymax + (ymax - ymin).abs() * 0.1 + 1.0 };
+                let ymin = if ymin.is_infinite() { 0.0 } else { ymin - (ymax - ymin).abs() * 0.05 };
+                let ymax = if ymax.is_infinite() { 10.0 } else { ymax + (ymax - ymin).abs() * 0.05 };
                 (ymin, ymax)
             } else {
                 (global_y_min, global_y_max)
@@ -2004,7 +2004,66 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         y_values
     };
 
-    // 6. Compute range limits across all x series
+    // 6. If a histogram layer exists, replace y_values with bin counts
+    // so the y-axis shows frequencies (0..max_count) instead of raw data
+    let has_histogram = if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+        layers.iter().any(|l| {
+            if let HayashiValue::Dict(d) = l {
+                d.get("geom").and_then(|g| if let HayashiValue::Str(s) = g { Some(s == "histogram") } else { None }).unwrap_or(false)
+            } else { false }
+        })
+    } else { false };
+
+    let y_values: Vec<f64> = if has_histogram {
+        // Compute histogram counts from x_series_values[0] and use as y
+        let bins = if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+            layers.iter().filter_map(|l| {
+                if let HayashiValue::Dict(d) = l {
+                    if d.get("geom").and_then(|g| if let HayashiValue::Str(s) = g { Some(s == "histogram") } else { None }).unwrap_or(false) {
+                        return d.get("bins").and_then(|b| match b {
+                            HayashiValue::Int(i) => Some(*i as usize),
+                            HayashiValue::Float(f) => Some(*f as usize),
+                            _ => None,
+                        }).or(Some(10));
+                    }
+                }
+                None
+            }).next().unwrap_or(10)
+        } else { 10 };
+
+        let x_vals = &x_series_values[0];
+        let valid: Vec<f64> = x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
+        if valid.is_empty() {
+            y_values
+        } else {
+            let v_min = valid.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+            let v_max = valid.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+            let bin_width = (v_max - v_min) / bins as f64;
+            if bin_width <= 0.0 {
+                y_values
+            } else {
+                let mut counts = vec![0usize; bins];
+                for &val in &valid {
+                    let idx = ((val - v_min) / bin_width) as usize;
+                    if idx < bins { counts[idx] += 1; } else { counts[bins-1] += 1; }
+                }
+                // y_values: for each x data point, use its bin count
+                // This makes y_min=0, y_max=max_count
+                x_vals.iter().map(|&x| {
+                    if x.is_nan() { f64::NAN }
+                    else {
+                        let idx = ((x - v_min) / bin_width) as usize;
+                        let i = if idx < bins { idx } else { bins - 1 };
+                        counts[i] as f64
+                    }
+                }).collect()
+            }
+        }
+    } else {
+        y_values
+    };
+
+    // 7. Compute range limits across all x series
     let x_min = x_series_values.iter()
         .flat_map(|series| series.iter())
         .filter(|&&v| !v.is_nan())
@@ -2017,10 +2076,11 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let y_max = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
     // Handle empty or constant coordinate boundaries
-    let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.1 - 1.0 };
-    let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.1 + 1.0 };
-    let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
-    let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
+    let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.05 };
+    let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
+    // For histograms, y-axis starts at 0 (frequencies are non-negative)
+    let y_min = if y_min.is_infinite() { 0.0 } else if has_histogram { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
+    let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
 
     // 7. Apply scale limits if specified
     let (x_min, x_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
