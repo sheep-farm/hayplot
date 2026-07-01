@@ -28,6 +28,7 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
 - `geom_smooth(plot: Dict, color: String, size: Float, method: String, se: Bool) -> Dict`: Appends a smoothed conditional mean (linear regression or LOESS). method: "lm" for linear regression. se: whether to show standard error bands.
 - `geom_text(plot: Dict, label: String, x: Float, y: Float, color: String, size: Float) -> Dict`: Adds text annotations at specified coordinates.
+- `set_series_config(plot, Dict, configs: Dict) -> Dict`: Sets configuration for individual series (color, size, etc.). configs: {"series_name": {"color": "blue", "size": 2.0}, ...}. Works with multiple x series.
 - `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
 - `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
 - `scale_x_continuous(plot: Dict, limits: List, breaks: List, labels: List) -> Dict`: Sets continuous scale options for x-axis: limits, breaks, and labels.
@@ -78,6 +79,22 @@ let plot = gg::hayplot(df, {"x": "y_control,y_treated", "y": "period"})
 let svg_content = gg::render_svg(plot)
 write(svg_content, "did_plot.svg")
 ```
+
+**Series Configuration:**
+
+Customize individual series with `set_series_config`:
+
+```text
+let plot = gg::hayplot(df, {"x": "control,treated", "y": "period"})
+    |> gg::set_series_config({"control": {"color": "blue", "size": 2.0}, "treated": {"color": "red", "size": 3.0}})
+    |> gg::geom_line("auto", 2.0)
+    |> gg::geom_point("auto", 3.0)
+```
+
+Supported config keys:
+- `color`: named color or hex code
+- `size`: line width or point size (f64)
+- Future: `alpha`, `geom`, `dash`, `shape`, `label`
 
 The x-axis can be:
 - Single column: `{"x": "col_x", "y": "col_y"}`

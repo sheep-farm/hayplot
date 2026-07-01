@@ -305,6 +305,19 @@ pub fn scale_y_log10(
     plot
 }
 
+/// 16.5. set_series_config(plot, configs)
+/// Sets configuration for individual series (color, size, geom, alpha, etc.).
+/// configs: Dict where keys are series names and values are config dicts.
+/// Example: {"y_control": {"color": "blue", "size": 2.0}, "y_treated": {"color": "red", "size": 3.0}}
+#[hayashi_fn]
+pub fn set_series_config(
+    mut plot: HashMap<String, HayashiValue>,
+    configs: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    plot.insert("series_config".to_string(), HayashiValue::Dict(configs));
+    plot
+}
+
 /// 17. filter_data(df, col, value)
 /// Filters a DataFrame to only include rows where the specified column equals the given value.
 /// This is a simplified approach to faceting - filter data manually, then call hayplot for each group.
@@ -1165,6 +1178,21 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         false
     };
 
+    // 5.5. Extract series config if provided
+    let series_config: Option<HashMap<String, HashMap<String, HayashiValue>>> = 
+        plot.get("series_config").and_then(|v| match v {
+            HayashiValue::Dict(d) => {
+                let mut configs = HashMap::new();
+                for (series_name, config_val) in d {
+                    if let HayashiValue::Dict(c) = config_val {
+                        configs.insert(series_name.clone(), c.clone());
+                    }
+                }
+                Some(configs)
+            }
+            _ => None,
+        });
+
     // Swap x and y if coord_flip is true (for multiple series, swap all series)
     let (x_series_values, y_values, x_label, y_label) = if coord_flip {
         // Swap: x becomes y, y becomes first x series (simplified for now)
@@ -1376,11 +1404,43 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 if use_auto_color {
                                     // Render each x series with different color
                                     for (idx, x_vals) in x_series_values.iter().enumerate() {
-                                        let series_color = get_series_color(idx);
+                                        let series_name = &x_series[idx];
+                                        
+                                        // Check for series-specific config
+                                        let series_color = if let Some(ref configs) = series_config {
+                                            if let Some(ref config) = configs.get(series_name) {
+                                                if let Some(HayashiValue::Str(c)) = config.get("color") {
+                                                    parse_color(c)
+                                                } else {
+                                                    get_series_color(idx).filled()
+                                                }
+                                            } else {
+                                                get_series_color(idx).filled()
+                                            }
+                                        } else {
+                                            get_series_color(idx).filled()
+                                        };
+                                        
+                                        let series_size = if let Some(ref configs) = series_config {
+                                            if let Some(config) = configs.get(series_name) {
+                                                if let Some(HayashiValue::Float(s)) = config.get("size") {
+                                                    *s
+                                                } else if let Some(HayashiValue::Int(s)) = config.get("size") {
+                                                    *s as f64
+                                                } else {
+                                                    size
+                                                }
+                                            } else {
+                                                size
+                                            }
+                                        } else {
+                                            size
+                                        };
+                                        
                                         chart.draw_series(
                                             x_vals.iter().zip(y_values.iter())
                                                 .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                                .map(|(&x, &y)| Circle::new((x, y), size as i32, series_color))
+                                                .map(|(&x, &y)| Circle::new((x, y), series_size as i32, series_color))
                                         ).map_err(|e| e.to_string())?;
                                     }
                                 } else {
@@ -1401,7 +1461,39 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 
                                 if use_auto_color {
                                     for (idx, x_vals) in x_series_values.iter().enumerate() {
-                                        let series_color = get_series_color(idx);
+                                        let series_name = &x_series[idx];
+                                        
+                                        // Check for series-specific config
+                                        let series_color = if let Some(ref configs) = series_config {
+                                            if let Some(ref config) = configs.get(series_name) {
+                                                if let Some(HayashiValue::Str(c)) = config.get("color") {
+                                                    parse_color(c)
+                                                } else {
+                                                    get_series_color(idx).stroke_width(size as u32)
+                                                }
+                                            } else {
+                                                get_series_color(idx).stroke_width(size as u32)
+                                            }
+                                        } else {
+                                            get_series_color(idx).stroke_width(size as u32)
+                                        };
+                                        
+                                        let series_size = if let Some(ref configs) = series_config {
+                                            if let Some(config) = configs.get(series_name) {
+                                                if let Some(HayashiValue::Float(s)) = config.get("size") {
+                                                    *s
+                                                } else if let Some(HayashiValue::Int(s)) = config.get("size") {
+                                                    *s as f64
+                                                } else {
+                                                    size
+                                                }
+                                            } else {
+                                                size
+                                            }
+                                        } else {
+                                            size
+                                        };
+                                        
                                         let mut points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
                                             .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                             .map(|(&x, &y)| (x, y))
@@ -1409,7 +1501,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
                                         
                                         chart.draw_series(
-                                            LineSeries::new(points.into_iter(), series_color.stroke_width(size as u32))
+                                            LineSeries::new(points.into_iter(), series_color.stroke_width(series_size as u32))
                                         ).map_err(|e| e.to_string())?;
                                     }
                                 } else {
