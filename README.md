@@ -28,6 +28,7 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
 - `geom_smooth(plot: Dict, color: String, size: Float, method: String, se: Bool) -> Dict`: Appends a smoothed conditional mean (linear regression or LOESS). method: "lm" for linear regression. se: whether to show standard error bands.
 - `geom_text(plot: Dict, label: String, x: Float, y: Float, color: String, size: Float) -> Dict`: Adds text annotations at specified coordinates.
+- `draw_element(plot, Dict, element_type: String, params: Dict) -> Dict`: Draws arbitrary geometric elements for annotations. element_type: "circle", "rect", "line_segment", "arrow". params: element-specific dict (x, y, size, width, height, x1, y1, x2, y2, arrow_size, color).
 - `set_series_config(plot, Dict, configs: Dict) -> Dict`: Sets configuration for individual series (color, size, etc.). configs: {"series_name": {"color": "blue", "size": 2.0}, ...}. Works with multiple x series.
 - `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
 - `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
@@ -95,6 +96,30 @@ Supported config keys:
 - `color`: named color or hex code
 - `size`: line width or point size (f64)
 - Future: `alpha`, `geom`, `dash`, `shape`, `label`
+
+**Geometric Elements:**
+
+Draw arbitrary geometric elements for annotations using `draw_element`:
+
+```text
+// Circle at (x, y) with radius
+gg::draw_element(plot, "circle", {"x": 3.0, "y": 30.0, "size": 15, "color": "red"})
+
+// Rectangle with top-left (x, y), width, height
+gg::draw_element(plot, "rect", {"x": 1.5, "y": 15.0, "width": 1.0, "height": 10.0, "color": "green"})
+
+// Line segment from (x1, y1) to (x2, y2)
+gg::draw_element(plot, "line_segment", {"x1": 4.0, "y1": 35.0, "x2": 5.0, "y2": 45.0, "size": 3, "color": "orange"})
+
+// Arrow from (x1, y1) to (x2, y2) with arrow head
+gg::draw_element(plot, "arrow", {"x1": 2.0, "y1": 10.0, "x2": 3.0, "y2": 25.0, "size": 2, "arrow_size": 6, "color": "purple"})
+```
+
+Supported element types:
+- `circle`: params {x, y, size, color}
+- `rect`: params {x, y, width, height, color}
+- `line_segment`: params {x1, y1, x2, y2, size, color}
+- `arrow`: params {x1, y1, x2, y2, size, arrow_size, color}
 
 The x-axis can be:
 - Single column: `{"x": "col_x", "y": "col_y"}`
