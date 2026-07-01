@@ -776,6 +776,69 @@ pub fn set_grid(
     plot
 }
 
+/// 22b. theme_minimal(plot)
+/// Minimal theme: white background, gray grid, no axis lines.
+#[hayashi_fn]
+pub fn theme_minimal(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert("show_grid".to_string(), HayashiValue::Bool(true));
+        spec.insert("panel_border".to_string(), HayashiValue::Bool(false));
+        spec.insert("axis_line_color".to_string(), HayashiValue::Str("gray".to_string()));
+        spec.insert("grid_color".to_string(), HayashiValue::Str("#EEEEEE".to_string()));
+    }
+    plot
+}
+
+/// 22c. theme_bw(plot)
+/// Black-and-white theme: white background, black grid, black axis lines.
+#[hayashi_fn]
+pub fn theme_bw(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert("show_grid".to_string(), HayashiValue::Bool(true));
+        spec.insert("panel_border".to_string(), HayashiValue::Bool(true));
+        spec.insert("axis_line_color".to_string(), HayashiValue::Str("black".to_string()));
+        spec.insert("grid_color".to_string(), HayashiValue::Str("#CCCCCC".to_string()));
+    }
+    plot
+}
+
+/// 22d. theme_classic(plot)
+/// Classic theme: white background, no grid, black axis lines only.
+#[hayashi_fn]
+pub fn theme_classic(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert("show_grid".to_string(), HayashiValue::Bool(false));
+        spec.insert("panel_border".to_string(), HayashiValue::Bool(false));
+        spec.insert("axis_line_color".to_string(), HayashiValue::Str("black".to_string()));
+    }
+    plot
+}
+
+/// 22e. theme_void(plot)
+/// Void theme: white background, no grid, no axis lines, no labels.
+#[hayashi_fn]
+pub fn theme_void(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert("show_grid".to_string(), HayashiValue::Bool(false));
+        spec.insert("panel_border".to_string(), HayashiValue::Bool(false));
+        spec.insert("axis_line_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert("hide_axis_labels".to_string(), HayashiValue::Bool(true));
+    }
+    plot
+}
+
 /// 24. coord_flip(plot)
 /// Flips the Cartesian coordinates, switching x and y axes.
 #[hayashi_fn]
@@ -2204,6 +2267,25 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         true
     };
 
+    // 10b. Get theme settings from spec
+    let hide_axis_labels = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("hide_axis_labels").and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        }).unwrap_or(false)
+    } else {
+        false
+    };
+
+    let _panel_border = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("panel_border").and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        }).unwrap_or(false)
+    } else {
+        false
+    };
+
     // 11. Render plot into an in-memory SVG string buffer
     let mut svg_buffer = String::new();
     {
@@ -2237,7 +2319,16 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             .build_cartesian_2d(x_min..x_max, y_min..y_max)
             .map_err(|e| e.to_string())?;
             
-        if show_grid {
+        if hide_axis_labels {
+            // theme_void: no axis labels, no mesh
+            chart.configure_mesh()
+                .disable_x_mesh()
+                .disable_y_mesh()
+                .disable_x_axis()
+                .disable_y_axis()
+                .draw()
+                .map_err(|e| e.to_string())?;
+        } else if show_grid {
             chart.configure_mesh()
                 .x_desc(x_label)
                 .y_desc(y_label)

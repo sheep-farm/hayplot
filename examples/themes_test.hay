@@ -1,0 +1,35 @@
+// Theme test: compare all 4 themes
+
+let df = df_read_csv("data/economics.csv")
+
+// theme_minimal: white bg, light gray grid, no border
+let p1 = gg::hayplot(df, {"x": "date", "y": "gdp"})
+    |> gg::geom_line("blue", 2.0)
+    |> gg::labs("theme_minimal", "Date", "GDP")
+    |> gg::theme_minimal()
+let svg1 = gg::render_svg(p1)
+write(svg1, "theme_minimal.svg")
+
+// theme_bw: white bg, gray grid, black border
+let p2 = gg::hayplot(df, {"x": "date", "y": "gdp"})
+    |> gg::geom_line("black", 2.0)
+    |> gg::labs("theme_bw", "Date", "GDP")
+    |> gg::theme_bw()
+let svg2 = gg::render_svg(p2)
+write(svg2, "theme_bw.svg")
+
+// theme_classic: white bg, no grid, axis lines only
+let p3 = gg::hayplot(df, {"x": "date", "y": "gdp"})
+    |> gg::geom_line("darkred", 2.0)
+    |> gg::labs("theme_classic", "Date", "GDP")
+    |> gg::theme_classic()
+let svg3 = gg::render_svg(p3)
+write(svg3, "theme_classic.svg")
+
+// theme_void: white bg, no grid, no axes
+let p4 = gg::hayplot(df, {"x": "date", "y": "gdp"})
+    |> gg::geom_line("green", 2.0)
+    |> gg::labs("theme_void", "", "")
+    |> gg::theme_void()
+let svg4 = gg::render_svg(p4)
+write(svg4, "theme_void.svg")

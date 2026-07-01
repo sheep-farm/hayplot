@@ -50,6 +50,10 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `set_margins(plot: Dict, top: Int, bottom: Int, left: Int, right: Int) -> Dict`: Sets plot margins in pixels. Default is 20px on all sides.
 - `set_background_color(plot: Dict, color: String) -> Dict`: Sets the background color. Default is white. Accepts named colors or hex codes.
 - `set_grid(plot: Dict, show_grid: Bool) -> Dict`: Enables or disables the grid. Default is true.
+- `theme_minimal(plot: Dict) -> Dict`: Minimal theme — white background, light gray grid, no panel border.
+- `theme_bw(plot: Dict) -> Dict`: Black-and-white theme — white background, gray grid, black panel border.
+- `theme_classic(plot: Dict) -> Dict`: Classic theme — white background, no grid, axis lines only.
+- `theme_void(plot: Dict) -> Dict`: Void theme — white background, no grid, no axis lines or labels.
 - `coord_flip(plot: Dict) -> Dict`: Flips the Cartesian coordinates, switching x and y axes.
 - `theme_element_text(plot: Dict, family: String, size: Float, color: String) -> Dict`: Sets text theme properties (font family, size, color).
 - `save_svg(plot: Dict, filename: String) -> Result<String, String>`: Renders and saves the plot to a file in one step. Returns SVG content.
