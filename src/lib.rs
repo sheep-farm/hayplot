@@ -1210,14 +1210,14 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
         // Apply padding to axis ranges (internal spacing within plot area)
         let plot_width = width as f64 - margin_left as f64 - margin_right as f64;
         let plot_height = height as f64 - margin_top as f64 - margin_bottom as f64;
-        
-        let x_pixels_per_unit = (x_max - x_min) / plot_width;
-        let y_pixels_per_unit = (y_max - y_min) / plot_height;
-        
-        let x_min = x_min + padding_left / x_pixels_per_unit;
-        let x_max = x_max - padding_right / x_pixels_per_unit;
-        let y_min = y_min + padding_bottom / y_pixels_per_unit;
-        let y_max = y_max - padding_top / y_pixels_per_unit;
+
+        let x_units_per_pixel = (x_max - x_min) / plot_width;
+        let y_units_per_pixel = (y_max - y_min) / plot_height;
+
+        let x_min = x_min + padding_left * x_units_per_pixel;
+        let x_max = x_max - padding_right * x_units_per_pixel;
+        let y_min = y_min + padding_bottom * y_units_per_pixel;
+        let y_max = y_max - padding_top * y_units_per_pixel;
         
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
@@ -2021,7 +2021,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.1 + 1.0 };
     let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
     let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
-    
+
     // 7. Apply scale limits if specified
     let (x_min, x_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
         if let Some(HayashiValue::List(limits)) = scales.get("x_limits") {
@@ -2299,15 +2299,15 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         // Padding is in pixels, so we need to convert to data coordinates
         let plot_width = width as f64 - margin_left as f64 - margin_right as f64;
         let plot_height = height as f64 - margin_top as f64 - margin_bottom as f64;
-        
-        let x_pixels_per_unit = (x_max - x_min) / plot_width;
-        let y_pixels_per_unit = (y_max - y_min) / plot_height;
-        
-        let x_min = x_min + padding_left / x_pixels_per_unit;
-        let x_max = x_max - padding_right / x_pixels_per_unit;
-        let y_min = y_min + padding_bottom / y_pixels_per_unit;
-        let y_max = y_max - padding_top / y_pixels_per_unit;
-        
+
+        let x_units_per_pixel = (x_max - x_min) / plot_width;
+        let y_units_per_pixel = (y_max - y_min) / plot_height;
+
+        let x_min = x_min + padding_left * x_units_per_pixel;
+        let x_max = x_max - padding_right * x_units_per_pixel;
+        let y_min = y_min + padding_bottom * y_units_per_pixel;
+        let y_max = y_max - padding_top * y_units_per_pixel;
+
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
             .margin_top(margin_top)

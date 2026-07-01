@@ -8,6 +8,7 @@ use std::sync::Arc;
 pub fn extract_column_f64(struct_arr: &StructArray, name: &str) -> Result<Vec<f64>, String> {
     let col = struct_arr.column_by_name(name)
         .ok_or_else(|| format!("Column '{}' not found in DataFrame", name))?;
+
         
     let len = col.len();
     let mut values = Vec::with_capacity(len);
