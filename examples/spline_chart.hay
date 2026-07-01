@@ -1,0 +1,22 @@
+import("sheep-farm/hayplot" as= gg)
+
+// Smooth spline interpolation using Catmull-Rom algorithm
+// Demonstrates smooth curve interpolation between data points
+// Unlike geom_smooth (regression), geom_spline passes through all points
+
+let data = {
+    "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
+    "y": [10.0, 25.0, 15.0, 35.0, 20.0, 40.0, 30.0]
+}
+
+let df = dataframe(data)
+
+// Smooth spline with conservative tension (0.2)
+// tension: 0.0 = linear, 1.0 = very smooth
+let plot = gg :: hayplot (df , {"x": "x", "y": "y"})
+    |> gg :: geom_spline ("blue", 2.0, 0.2)
+    |> gg :: geom_point ("blue", 3.0)
+    |> gg :: labs ("Smooth Spline Interpolation", "X", "Y")
+
+let svg = gg :: render_svg (plot)
+write (svg , "spline_chart.svg")

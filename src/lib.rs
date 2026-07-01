@@ -266,7 +266,7 @@ pub fn geom_smooth(
 
 /// 13.5. geom_spline(plot, color, size, tension)
 /// Appends a smooth spline curve (Catmull-Rom interpolation) to the plot spec dictionary.
-/// tension: 0.0 (linear) to 1.0 (very smooth), defaults to 0.5
+/// tension: 0.0 (linear) to 1.0 (very smooth), defaults to 0.2 (conservative)
 #[hayashi_fn]
 pub fn geom_spline(
     mut plot: HashMap<String, HayashiValue>,
@@ -2006,7 +2006,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 let tension = match layer.get("tension") {
                                     Some(HayashiValue::Float(t)) => *t,
                                     Some(HayashiValue::Int(t)) => *t as f64,
-                                    _ => 0.5,
+                                    _ => 0.2,
                                 };
 
                                 let x_vals = &x_series_values[0]; // Use first series
