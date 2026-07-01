@@ -1,14 +1,24 @@
 import("sheep-farm/hayplot" as= gg)
 
-// Teste simples com dados internos (sem carregar arquivo externo)
-// Criar DataFrame manualmente com dados de teste
+// Demonstração de múltiplas séries (NOVO v1.3.0)
+// Este exemplo mostra como plotar múltiplas séries no mesmo gráfico
+// Útil para visualizações como DiD (Difference-in-Differences)
 
-// Por enquanto, vamos apenas testar que a compilação funciona
-// Para testar a funcionalidade real, precisamos de dados externos
+// Nota: Este exemplo requer dados externos para funcionar
+// Para testar, use seu próprio dataset com múltiplas colunas no eixo x
 
-// Simples teste de funcionalidade existente
-let plot = gg :: hayplot ([] , {"x": "x", "y": "y"})
-    |> gg :: geom_point ("blue", 2.0)
+// Exemplo de uso com dataset real:
+// let df = load("seu_dataset.dta")
+// let plot = gg :: hayplot (df , {"x": ["col1", "col2"], "y": "col_y"})
+//     |> gg :: geom_line ("auto", 2.0)
+//     |> gg :: geom_point ("auto", 3.0)
+// let svg = gg :: render_svg (plot)
+// write (svg , "did_test.svg")
 
-let svg = gg :: render_svg (plot)
-write (svg , "did_test.svg")
+// Exemplo de sintaxe:
+// - x: lista de colunas ["col1", "col2", ...] para múltiplas séries
+// - y: coluna única para eixo y comum
+// - color: "auto" usa paleta automática de 8 cores
+// - color: "blue" usa mesma cor para todas as séries
+
+// Consulte README.md para documentação completa

@@ -60,6 +60,31 @@ hay install sheep-farm/hayplot
 
 This will download the native dynamic library pre-compiled by CI/CD and verify its GitHub Artifact Attestation for cryptographic build provenance.
 
+## Multiple Series (v1.3.0)
+
+Plot multiple x series with automatic color palette, useful for DiD and multi-series visualizations:
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let df = load("data.dta")
+
+// Multiple series with auto colors
+let plot = gg::hayplot(df, {"x": ["y_control", "y_treated"], "y": "period"})
+    |> gg::geom_line("auto", 2.0)
+    |> gg::geom_point("auto", 3.0)
+    |> gg::labs("DiD: Treatment vs Control", "Outcome", "Period")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "did_plot.svg")
+```
+
+The x-axis can be:
+- Single column: `{"x": "col_x", "y": "col_y"}`
+- Multiple columns: `{"x": ["col1", "col2", ...], "y": "col_y"}`
+
+Use `color="auto"` in `geom_point` or `geom_line` for automatic color palette (8 colors). Specify a named color like `"blue"` to use the same color for all series.
+
 ## How to Use in Hayashi
 
 After installation, use the pipe operator `|>` to construct and save plots in your `.hay` script.
