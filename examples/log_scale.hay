@@ -1,0 +1,27 @@
+// Logarithmic Scale Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/log_scale.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a dataset with exponential growth
+let data = {"x": [1.0,  10.0,   100.0,    1000.0,     10000.0,      100000.0], 
+            "y": [1.0, 100.0, 10000.0, 1000000.0, 100000000.0, 10000000000.0]}
+let df = dataframe(data)
+
+// 2. Build the plot with logarithmic scales
+print("Building plot with log scales...")
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+        |> gg::geom_point("#FF5733", 5.0)  // Custom hex color
+        |> gg::geom_line("#C70039", 2.0)
+        |> gg::scale_x_log10()
+        |> gg::scale_y_log10()
+        |> gg::labs("Exponential Growth (Log Scale)", "X (log10)", "Y (log10)")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "log_scale.svg")
+print("Plot successfully saved to 'log_scale.svg'!")
