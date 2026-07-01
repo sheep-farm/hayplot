@@ -137,7 +137,7 @@
 \newcommand{\hayplot}{\textbf{hayplot}}
 
 % ── Metadados da versão ─────────────────────────────────────────────────────
-\newcommand{\hayversiontag}{v1.0.0}
+\newcommand{\hayversiontag}{v1.1.0}
 \newcommand{\hayashiversiontag}{0.2.6}
 
 % ============================================================
@@ -1091,6 +1091,47 @@ let plot = gg::hayplot(df, {"x": "x", "y": "y"})
 \end{lstlisting}
 
 % ─────────────────────────────────────────────────────────---
+\section{\texttt{save\_png(plot, filename)} --- Salvar PNG}
+\index{save\_png()}
+% ─────────────────────────────────────────────────────────---
+
+Renderiza o plot e salva como arquivo PNG. Requer a feature \code{png} durante a compilação. Função de conveniência que combina renderização PNG + escrita de arquivo.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+save_png(plot: Dict, filename: String) -> Result<String, String>
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}     & \code{Dict}   & A especificação de plot. \\[4pt]
+  \code{filename} & \code{String} & Nome do arquivo para salvar o PNG. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O conteúdo PNG codificado em base64 como uma string.
+
+\subsection*{Nota}
+
+Requer compilação com a feature \code{png}: \code{cargo build --release --features png}. O backend PNG atualmente suporta apenas geometrias básicas (point, line, bar, area).
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Salvamento PNG em um passo}]
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+           |> gg::geom_point("blue", 5.0)
+           |> gg::geom_line("red", 2.0)
+let png = gg::save_png(plot, "output.png")
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────---
 
 % ────────────────────────────────────────────────────────────
 \section{\texttt{labs(plot, title, x, y)} --- Rótulos}
@@ -1806,10 +1847,11 @@ no loop de layers.
     v0.9.0 & \code{save\_svg} --- render + save em um passo                      & $\checkmark$ Conclu\'{i}do \\
     v1.0.0 & \code{set\_background\_color} --- cor de fundo customizável          & $\checkmark$ Conclu\'{i}do \\
     v1.0.0 & \code{set\_grid} --- controle do grid on/off                          & $\checkmark$ Conclu\'{i}do \\
-    v1.0.0 & Saída PNG (via feature \code{png\_backend})                        & Planejado \\
-    v1.0.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
-    v1.0.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
-    v1.0.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
+    v1.1.0 & \code{save\_png} --- exportação PNG (feature flag)                 & $\checkmark$ Conclu\'{i}do \\
+    v1.1.0 & Suporte completo de geometrias em PNG                               & Futuro \\
+    v1.1.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
+    v1.1.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
+    v1.1.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
     \bottomrule
   \end{tabularx}
 \end{center}
@@ -1844,6 +1886,7 @@ no loop de layers.
     \code{set\_background\_color(plot, color)}     & \code{Dict, String}                 & Define cor de fundo (padrão: white) \\[3pt]
     \code{set\_grid(plot, show\_grid)}               & \code{Dict, Bool}                   & Habilita/desabilita grid (padrão: true) \\[3pt]
     \code{save\_svg(plot, filename)}               & \code{Dict, String}                 & Renderiza e salva SVG em um passo \\[3pt]
+    \code{save\_png(plot, filename)}               & \code{Dict, String}                 & Renderiza e salva PNG em um passo (feature: png) \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule
@@ -1856,6 +1899,13 @@ no loop de layers.
   As funções \code{facet\_wrap} e \code{render\_facets} foram descontinuadas na v0.8.0.
   Use \code{filter\_data()} para filtrar DataFrames manualmente e chame \code{hayplot} para cada grupo.
 \end{alertbox}
+
+\bigskip
+
+\begin{tipbox}[title={\textbf{Nota:} PNG export}]
+  A função \code{save\_png} requer compilação com a feature \code{png}: \code{cargo build --release --features png}.
+  O backend PNG atualmente suporta apenas geometrias básicas (point, line, bar, area).
+\end{tipbox}
 
 \bigskip
 

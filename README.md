@@ -31,12 +31,15 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `set_background_color(plot: Dict, color: String) -> Dict`: Sets the background color. Default is white. Accepts named colors or hex codes.
 - `set_grid(plot: Dict, show_grid: Bool) -> Dict`: Enables or disables the grid. Default is true.
 - `save_svg(plot: Dict, filename: String) -> Result<String, String>`: Renders and saves the plot to a file in one step. Returns SVG content.
+- `save_png(plot: Dict, filename: String) -> Result<String, String>`: Renders and saves the plot as PNG. Requires "png" feature. Returns base64-encoded PNG data.
 - `facet_wrap(plot: Dict, group_col: String) -> Dict`: [DEPRECATED] Kept for compatibility. Use `filter_data()` instead.
 - `render_facets(plot: Dict) -> Result<List<String>, String>`: [DEPRECATED] Kept for compatibility. Use `filter_data()` + manual calls instead.
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
 **Color Specification**: All color parameters accept both named colors (e.g., "red", "blue", "green") and hex codes (e.g., "#FF5733", "#C70039").
+
+**PNG Export**: PNG export is available via the `png` feature flag. Build with `cargo build --release --features png` to enable it. Note: PNG backend currently supports basic geometries (point, line, bar, area) only.
 
 ## How to Install
 

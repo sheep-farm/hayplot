@@ -1,0 +1,22 @@
+// save_png Example (requires hayplot compiled with png feature)
+// To build with PNG support: cargo build --release --features png
+// Then copy target/release/libhayplot.so to ~/.hay/packages/sheep-farm/hayplot.so
+// Run this from the root of the hayplot repository:
+// hay examples/save_png.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// Create a simple dataset
+let data = {"x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [10.0, 20.0, 15.0, 25.0, 30.0]}
+let df = dataframe(data)
+
+// Using save_png() - renders and saves as PNG in one step
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_dimensions(1000, 600)
+    |> gg::set_margins(40, 40, 60, 40)
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("red", 2.0)
+    |> gg::labs("save_png() Example", "X", "Y")
+
+let png = gg::save_png(plot, "plot_saved.png")
+print("Plot saved to 'plot_saved.png'!")

@@ -6,6 +6,9 @@ use plotters::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[cfg(feature = "png")]
+use base64;
+
 // Exposes dynamic library C ABI deallocation hooks
 hayashi_plugin!();
 
@@ -399,6 +402,302 @@ pub fn set_grid(
         spec.insert("show_grid".to_string(), HayashiValue::Bool(show_grid));
     }
     plot
+}
+
+#[cfg(feature = "png")]
+/// 23. save_png(plot, filename)
+/// Renders the plot and saves it as a PNG file. Requires the "png" feature.
+/// Returns the PNG binary data as a string (base64-encoded).
+#[hayashi_fn]
+pub fn save_png(
+    plot: HashMap<String, HayashiValue>,
+    filename: String
+) -> Result<HayashiValue, String> {
+    use base64::{Engine as _, engine::general_purpose};
+    
+    let png_data = render_png_impl(plot)?;
+    
+    // Write to file using std::fs
+    std::fs::write(&filename, &png_data)
+        .map_err(|e| format!("Failed to write PNG to '{}': {}", filename, e))?;
+    
+    // Return base64-encoded string for potential use
+    Ok(HayashiValue::Str(general_purpose::STANDARD.encode(&png_data)))
+}
+
+#[cfg(feature = "png")]
+/// Helper function to render plot as PNG binary data
+/// Note: Simplified implementation supporting basic geometries (point, line, bar, area)
+fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, String> {
+    use plotters::prelude::*;
+    
+    // Extract data from plot (same approach as render_svg)
+    let df_val = plot.get("data")
+        .ok_or_else(|| "No data in plot specification".to_string())?;
+    
+    let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_val.clone())
+        .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
+        
+    let struct_arr = df_arr.as_any()
+        .downcast_ref::<StructArray>()
+        .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
+        
+    // Get aesthetic mapping
+    let mapping_val = plot.get("mapping")
+        .ok_or_else(|| "No mapping in plot specification".to_string())?;
+    let mapping = match mapping_val {
+        HayashiValue::Dict(m) => m,
+        _ => return Err("Mapping must be a Dictionary".to_string()),
+    };
+    
+    let x_col_val = mapping.get("x")
+        .ok_or_else(|| "Mapping must contain 'x'".to_string())?;
+    let y_col_val = mapping.get("y")
+        .ok_or_else(|| "Mapping must contain 'y'".to_string())?;
+        
+    let x_col = match x_col_val {
+        HayashiValue::Str(s) => s.as_str(),
+        _ => return Err("x must be a string".to_string()),
+    };
+    
+    let y_col = match y_col_val {
+        HayashiValue::Str(s) => s.as_str(),
+        _ => return Err("y must be a string".to_string()),
+    };
+    
+    let x_values = extract_column_f64(struct_arr, x_col)?;
+    let y_values = extract_column_f64(struct_arr, y_col)?;
+    
+    // Extract metadata
+    let title = plot.get("title")
+        .and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.as_str()),
+            _ => None,
+        })
+        .unwrap_or("Plot");
+    
+    let x_label = plot.get("x_label")
+        .and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.as_str()),
+            _ => None,
+        })
+        .unwrap_or("X");
+    
+    let y_label = plot.get("y_label")
+        .and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.as_str()),
+            _ => None,
+        })
+        .unwrap_or("Y");
+    
+    // Check for log scales
+    let log_x = plot.get("log_x")
+        .and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        })
+        .unwrap_or(false);
+    
+    let log_y = plot.get("log_y")
+        .and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        })
+        .unwrap_or(false);
+    
+    // Transform coordinates if log scale is enabled
+    let x_values = if log_x {
+        x_values.iter().map(|&v| if v > 0.0 { v.log10() } else { f64::NAN }).collect()
+    } else {
+        x_values
+    };
+    
+    let y_values = if log_y {
+        y_values.iter().map(|&v| if v > 0.0 { v.log10() } else { f64::NAN }).collect()
+    } else {
+        y_values
+    };
+    
+    // Compute range limits
+    let x_min = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
+    let x_max = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let y_min = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
+    let y_max = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    
+    // Handle empty or constant coordinate boundaries
+    let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.1 - 1.0 };
+    let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.1 + 1.0 };
+    let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
+    let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
+    
+    // Get dimensions from spec or use defaults
+    let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        let w = spec.get("width").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(800);
+        let h = spec.get("height").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(600);
+        (w, h)
+    } else {
+        (800, 600)
+    };
+    
+    // Get margins from spec or use defaults
+    let (margin_top, margin_bottom, margin_left, margin_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        let mt = spec.get("margin_top").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        let mb = spec.get("margin_bottom").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        let ml = spec.get("margin_left").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        let mr = spec.get("margin_right").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        (mt, mb, ml, mr)
+    } else {
+        (20, 20, 20, 20)
+    };
+    
+    // Get background color from spec or use default (white)
+    let background_color_name = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("background_color").and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.clone()),
+            _ => None,
+        }).unwrap_or_else(|| "white".to_string())
+    } else {
+        "white".to_string()
+    };
+    
+    // Get grid setting from spec or use default (true)
+    let show_grid = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("show_grid").and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        }).unwrap_or(true)
+    } else {
+        true
+    };
+    
+    // Render plot into an in-memory PNG buffer
+    let mut png_buffer = Vec::new();
+    {
+        let root = BitMapBackend::with_buffer(&mut png_buffer, (width, height)).into_drawing_area();
+        
+        // Parse and apply background color (convert to RGBColor)
+        let bg_rgb = parse_color_to_rgb(&background_color_name);
+        root.fill(&bg_rgb).map_err(|e| e.to_string())?;
+        
+        let mut chart = ChartBuilder::on(&root)
+            .caption(title, ("sans-serif", 30).into_font())
+            .margin_top(margin_top)
+            .margin_bottom(margin_bottom)
+            .margin_left(margin_left)
+            .margin_right(margin_right)
+            .x_label_area_size(40)
+            .y_label_area_size(40)
+            .build_cartesian_2d(x_min..x_max, y_min..y_max)
+            .map_err(|e| e.to_string())?;
+        
+        if show_grid {
+            chart.configure_mesh()
+                .x_desc(x_label)
+                .y_desc(y_label)
+                .draw()
+                .map_err(|e| e.to_string())?;
+        } else {
+            chart.configure_mesh()
+                .x_desc(x_label)
+                .y_desc(y_label)
+                .disable_x_mesh()
+                .disable_y_mesh()
+                .draw()
+                .map_err(|e| e.to_string())?;
+        }
+        
+        // Draw layers sequentially (basic geometries only for PNG)
+        if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+            for layer_val in layers {
+                if let HayashiValue::Dict(layer) = layer_val {
+                    if let Some(HayashiValue::Str(geom)) = layer.get("geom") {
+                        let color_name = match layer.get("color") {
+                            Some(HayashiValue::Str(c)) => c.as_str(),
+                            _ => "blue",
+                        };
+                        let color = parse_color(color_name);
+                        
+                        match geom.as_str() {
+                            "point" => {
+                                let size = layer.get("size").and_then(|v| match v {
+                                    HayashiValue::Float(f) => Some(*f),
+                                    _ => None,
+                                }).unwrap_or(5.0);
+                                
+                                chart.draw_series(x_values.iter().zip(y_values.iter()).map(|(&x, &y)| {
+                                    Circle::new((x, y), size, color.filled())
+                                })).map_err(|e| e.to_string())?;
+                            }
+                            "line" => {
+                                let size = layer.get("size").and_then(|v| match v {
+                                    HayashiValue::Float(f) => Some(*f),
+                                    _ => None,
+                                }).unwrap_or(2.0);
+                                
+                                chart.draw_series(LineSeries::new(
+                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
+                                    color.stroke_width(size as u32)
+                                )).map_err(|e| e.to_string())?;
+                            }
+                            "bar" => {
+                                let width = layer.get("width").and_then(|v| match v {
+                                    HayashiValue::Float(f) => Some(*f),
+                                    _ => None,
+                                }).unwrap_or(0.5);
+                                
+                                chart.draw_series(
+                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| {
+                                        Rectangle::new([(x - width/2.0, 0.0), (x + width/2.0, y)], color.filled())
+                                    })
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            "area" => {
+                                let size = layer.get("size").and_then(|v| match v {
+                                    HayashiValue::Float(f) => Some(*f),
+                                    _ => None,
+                                }).unwrap_or(2.0);
+                                
+                                chart.draw_series(AreaSeries::new(
+                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
+                                    0.0,
+                                    color.filled()
+                                )).map_err(|e| e.to_string())?;
+                                
+                                chart.draw_series(LineSeries::new(
+                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
+                                    color.stroke_width(size as u32)
+                                )).map_err(|e| e.to_string())?;
+                            }
+                            _ => {
+                                // Other geometries not yet supported in PNG backend
+                                // Skip silently for now
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(png_buffer)
 }
 
 /// 19. facet_wrap(plot, group_col)
