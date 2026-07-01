@@ -318,6 +318,26 @@ pub fn set_series_config(
     plot
 }
 
+/// 17.5. draw_element(plot, element_type, params)
+/// Draws arbitrary geometric elements (circles, rectangles, arrows, line segments) for annotations.
+/// element_type: "circle", "rect", "arrow", "line_segment"
+/// params: Dict with element-specific parameters (x, y, color, size, width, height, etc.)
+#[hayashi_fn]
+pub fn draw_element(
+    mut plot: HashMap<String, HayashiValue>,
+    element_type: String,
+    params: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("element".to_string()));
+        layer.insert("element_type".to_string(), HayashiValue::Str(element_type));
+        layer.insert("params".to_string(), HayashiValue::Dict(params));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
 /// 17. filter_data(df, col, value)
 /// Filters a DataFrame to only include rows where the specified column equals the given value.
 /// This is a simplified approach to faceting - filter data manually, then call hayplot for each group.
@@ -1928,6 +1948,144 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 chart.draw_series(std::iter::once(
                                     Text::new(label, (text_x, text_y), text_style)
                                 )).map_err(|e| e.to_string())?;
+                            }
+                            "element" => {
+                                // Handle arbitrary geometric elements
+                                let element_type = match layer.get("element_type") {
+                                    Some(HayashiValue::Str(t)) => t.as_str(),
+                                    _ => return Err("element_type must be a String".to_string()),
+                                };
+                                let params = match layer.get("params") {
+                                    Some(HayashiValue::Dict(p)) => p,
+                                    _ => return Err("params must be a Dictionary".to_string()),
+                                };
+                                
+                                let color_name = match params.get("color") {
+                                    Some(HayashiValue::Str(c)) => c.as_str(),
+                                    _ => "red",
+                                };
+                                let style = parse_color(color_name);
+                                
+                                match element_type {
+                                    "circle" => {
+                                        let x = match params.get("x") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("circle requires 'x' parameter".to_string()),
+                                        };
+                                        let y = match params.get("y") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("circle requires 'y' parameter".to_string()),
+                                        };
+                                        let size = match params.get("size") {
+                                            Some(HayashiValue::Float(s)) => *s as i32,
+                                            Some(HayashiValue::Int(s)) => *s as i32,
+                                            _ => 10,
+                                        };
+                                        chart.draw_series(std::iter::once(
+                                            Circle::new((x, y), size, style.filled())
+                                        )).map_err(|e| e.to_string())?;
+                                    }
+                                    "rect" => {
+                                        let x = match params.get("x") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("rect requires 'x' parameter".to_string()),
+                                        };
+                                        let y = match params.get("y") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("rect requires 'y' parameter".to_string()),
+                                        };
+                                        let width = match params.get("width") {
+                                            Some(HayashiValue::Float(w)) => *w,
+                                            Some(HayashiValue::Int(w)) => *w as f64,
+                                            _ => return Err("rect requires 'width' parameter".to_string()),
+                                        };
+                                        let height = match params.get("height") {
+                                            Some(HayashiValue::Float(h)) => *h,
+                                            Some(HayashiValue::Int(h)) => *h as f64,
+                                            _ => return Err("rect requires 'height' parameter".to_string()),
+                                        };
+                                        chart.draw_series(std::iter::once(
+                                            Rectangle::new([(x, y), (x + width, y + height)], style.filled())
+                                        )).map_err(|e| e.to_string())?;
+                                    }
+                                    "line_segment" => {
+                                        let x1 = match params.get("x1") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("line_segment requires 'x1' parameter".to_string()),
+                                        };
+                                        let y1 = match params.get("y1") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("line_segment requires 'y1' parameter".to_string()),
+                                        };
+                                        let x2 = match params.get("x2") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("line_segment requires 'x2' parameter".to_string()),
+                                        };
+                                        let y2 = match params.get("y2") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("line_segment requires 'y2' parameter".to_string()),
+                                        };
+                                        let size = match params.get("size") {
+                                            Some(HayashiValue::Float(s)) => *s as u32,
+                                            Some(HayashiValue::Int(s)) => *s as u32,
+                                            _ => 2,
+                                        };
+                                        chart.draw_series(std::iter::once(
+                                            PathElement::new(vec![(x1, y1), (x2, y2)], style.stroke_width(size))
+                                        )).map_err(|e| e.to_string())?;
+                                    }
+                                    "arrow" => {
+                                        let x1 = match params.get("x1") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("arrow requires 'x1' parameter".to_string()),
+                                        };
+                                        let y1 = match params.get("y1") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("arrow requires 'y1' parameter".to_string()),
+                                        };
+                                        let x2 = match params.get("x2") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("arrow requires 'x2' parameter".to_string()),
+                                        };
+                                        let y2 = match params.get("y2") {
+                                            Some(HayashiValue::Float(v)) => *v,
+                                            Some(HayashiValue::Int(v)) => *v as f64,
+                                            _ => return Err("arrow requires 'y2' parameter".to_string()),
+                                        };
+                                        let size = match params.get("size") {
+                                            Some(HayashiValue::Float(s)) => *s as u32,
+                                            Some(HayashiValue::Int(s)) => *s as u32,
+                                            _ => 2,
+                                        };
+                                        // Draw line segment
+                                        chart.draw_series(std::iter::once(
+                                            PathElement::new(vec![(x1, y1), (x2, y2)], style.stroke_width(size))
+                                        )).map_err(|e| e.to_string())?;
+                                        // Draw arrow head (simplified: small circle at end)
+                                        let arrow_size = match params.get("arrow_size") {
+                                            Some(HayashiValue::Float(s)) => *s as i32,
+                                            Some(HayashiValue::Int(s)) => *s as i32,
+                                            _ => 5,
+                                        };
+                                        chart.draw_series(std::iter::once(
+                                            Circle::new((x2, y2), arrow_size, style.filled())
+                                        )).map_err(|e| e.to_string())?;
+                                    }
+                                    _ => {
+                                        return Err(format!("Unknown element_type: {}", element_type));
+                                    }
+                                }
                             }
                             _ => {}
                         }
