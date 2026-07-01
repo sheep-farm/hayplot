@@ -26,6 +26,8 @@ pub fn hayplot(
     plot.insert("labs".to_string(), HayashiValue::Dict(HashMap::new()));
     plot.insert("scales".to_string(), HayashiValue::Dict(HashMap::new()));
     plot.insert("spec".to_string(), HayashiValue::Dict(HashMap::new()));
+    plot.insert("coords".to_string(), HayashiValue::Dict(HashMap::new()));
+    plot.insert("theme".to_string(), HayashiValue::Dict(HashMap::new()));
     plot
 }
 
@@ -237,7 +239,31 @@ pub fn geom_step(
     plot
 }
 
-/// 12. labs(plot, title, x, y)
+/// 13. geom_smooth(plot, color, size, method, se)
+/// Appends a smoothed conditional mean (linear regression or LOESS) to the plot.
+/// method: "lm" for linear regression, "loess" for local regression (not yet implemented, defaults to lm)
+/// se: whether to show standard error bands (true/false)
+#[hayashi_fn]
+pub fn geom_smooth(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    method: String,
+    se: bool
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("smooth".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("method".to_string(), HayashiValue::Str(method));
+        layer.insert("se".to_string(), HayashiValue::Bool(se));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 14. labs(plot, title, x, y)
 /// Adds plot title and custom axis labels to the plot spec dictionary.
 #[hayashi_fn]
 pub fn labs(
@@ -254,7 +280,7 @@ pub fn labs(
     plot
 }
 
-/// 13. scale_x_log10(plot)
+/// 15. scale_x_log10(plot)
 /// Sets the x-axis to logarithmic scale (base 10).
 #[hayashi_fn]
 pub fn scale_x_log10(
@@ -266,7 +292,7 @@ pub fn scale_x_log10(
     plot
 }
 
-/// 14. scale_y_log10(plot)
+/// 16. scale_y_log10(plot)
 /// Sets the y-axis to logarithmic scale (base 10).
 #[hayashi_fn]
 pub fn scale_y_log10(
@@ -278,7 +304,7 @@ pub fn scale_y_log10(
     plot
 }
 
-/// 15. filter_data(df, col, value)
+/// 17. filter_data(df, col, value)
 /// Filters a DataFrame to only include rows where the specified column equals the given value.
 /// This is a simplified approach to faceting - filter data manually, then call hayplot for each group.
 #[hayashi_fn]
@@ -402,6 +428,118 @@ pub fn set_grid(
         spec.insert("show_grid".to_string(), HayashiValue::Bool(show_grid));
     }
     plot
+}
+
+/// 24. coord_flip(plot)
+/// Flips the Cartesian coordinates, switching x and y axes.
+#[hayashi_fn]
+pub fn coord_flip(
+    mut plot: HashMap<String, HayashiValue>
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut coords)) = plot.get_mut("coords") {
+        coords.insert("flip".to_string(), HayashiValue::Bool(true));
+    }
+    plot
+}
+
+/// 25. geom_text(plot, label, x, y, color, size)
+/// Adds text annotations at specified coordinates.
+#[hayashi_fn]
+pub fn geom_text(
+    mut plot: HashMap<String, HayashiValue>,
+    label: String,
+    x: f64,
+    y: f64,
+    color: String,
+    size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("text".to_string()));
+        layer.insert("label".to_string(), HayashiValue::Str(label));
+        layer.insert("x".to_string(), HayashiValue::Float(x));
+        layer.insert("y".to_string(), HayashiValue::Float(y));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 26. scale_x_continuous(plot, limits, breaks, labels)
+/// Sets continuous scale options for x-axis: limits, breaks, and labels.
+/// limits: [min, max] or null
+/// breaks: list of values or null
+/// labels: list of strings or null
+#[hayashi_fn]
+pub fn scale_x_continuous(
+    mut plot: HashMap<String, HayashiValue>,
+    limits: HayashiValue,
+    breaks: HayashiValue,
+    labels: HayashiValue
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
+        scales.insert("x_limits".to_string(), limits);
+        scales.insert("x_breaks".to_string(), breaks);
+        scales.insert("x_labels".to_string(), labels);
+    }
+    plot
+}
+
+/// 27. scale_y_continuous(plot, limits, breaks, labels)
+/// Sets continuous scale options for y-axis: limits, breaks, and labels.
+#[hayashi_fn]
+pub fn scale_y_continuous(
+    mut plot: HashMap<String, HayashiValue>,
+    limits: HayashiValue,
+    breaks: HayashiValue,
+    labels: HayashiValue
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
+        scales.insert("y_limits".to_string(), limits);
+        scales.insert("y_breaks".to_string(), breaks);
+        scales.insert("y_labels".to_string(), labels);
+    }
+    plot
+}
+
+/// 28. theme_element_text(plot, family, size, color)
+/// Sets text theme properties (font family, size, color).
+#[hayashi_fn]
+pub fn theme_element_text(
+    mut plot: HashMap<String, HayashiValue>,
+    family: String,
+    size: f64,
+    color: String
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut theme)) = plot.get_mut("theme") {
+        let mut text = HashMap::new();
+        text.insert("family".to_string(), HayashiValue::Str(family));
+        text.insert("size".to_string(), HayashiValue::Float(size));
+        text.insert("color".to_string(), HayashiValue::Str(color));
+        theme.insert("text".to_string(), HayashiValue::Dict(text));
+    }
+    plot
+}
+
+/// 29. facet_wrap(plot, group_col)
+/// DEPRECATED: Use filter_data() instead. This function is kept for compatibility but does nothing.
+#[hayashi_fn]
+pub fn facet_wrap(
+    plot: HashMap<String, HayashiValue>,
+    _group_col: String
+) -> HashMap<String, HayashiValue> {
+    plot
+}
+
+/// 30. render_facets(plot)
+/// DEPRECATED: Use filter_data() + manual hayplot calls instead. This function renders a single plot.
+#[hayashi_fn]
+pub fn render_facets(
+    plot: HashMap<String, HayashiValue>
+) -> Result<HayashiValue, String> {
+    let svg_content = render_svg_impl(plot)?;
+    Ok(HayashiValue::List(vec![HayashiValue::Str(svg_content)]))
 }
 
 #[cfg(feature = "png")]
@@ -700,25 +838,6 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
     Ok(png_buffer)
 }
 
-/// 19. facet_wrap(plot, group_col)
-/// DEPRECATED: Use filter_data() instead. This function is kept for compatibility but does nothing.
-#[hayashi_fn]
-pub fn facet_wrap(
-    plot: HashMap<String, HayashiValue>,
-    _group_col: String
-) -> HashMap<String, HayashiValue> {
-    plot
-}
-
-/// 20. render_facets(plot)
-/// DEPRECATED: Use filter_data() + manual hayplot calls instead. This function renders a single plot.
-#[hayashi_fn]
-pub fn render_facets(
-    plot: HashMap<String, HayashiValue>
-) -> Result<HayashiValue, String> {
-    let svg_content = render_svg_impl(plot)?;
-    Ok(HayashiValue::List(vec![HayashiValue::Str(svg_content)]))
-}
 
 /// Helper function to extract a column as Vec<f64> from a StructArray
 fn extract_column_f64(struct_arr: &StructArray, name: &str) -> Result<Vec<f64>, String> {
@@ -837,6 +956,83 @@ fn parse_color_to_rgb(name: &str) -> RGBColor {
     }
 }
 
+/// Helper function for simple linear regression (y = mx + b)
+/// Returns (slope, intercept, r_squared)
+fn linear_regression(x: &[f64], y: &[f64]) -> Option<(f64, f64, f64)> {
+    let n = x.len();
+    if n < 2 {
+        return None;
+    }
+    
+    // Filter out NaN values
+    let pairs: Vec<(f64, f64)> = x.iter().zip(y.iter())
+        .filter(|(&xi, &yi)| !xi.is_nan() && !yi.is_nan())
+        .map(|(&xi, &yi)| (xi, yi))
+        .collect();
+    
+    if pairs.len() < 2 {
+        return None;
+    }
+    
+    let n = pairs.len() as f64;
+    let sum_x: f64 = pairs.iter().map(|&(xi, _)| xi).sum();
+    let sum_y: f64 = pairs.iter().map(|&(_, yi)| yi).sum();
+    let sum_xy: f64 = pairs.iter().map(|&(xi, yi)| xi * yi).sum();
+    let sum_x2: f64 = pairs.iter().map(|&(xi, _)| xi * xi).sum();
+    let _sum_y2: f64 = pairs.iter().map(|&(_, yi)| yi * yi).sum();
+    
+    let denominator = n * sum_x2 - sum_x * sum_x;
+    if denominator.abs() < 1e-10 {
+        return None; // Vertical line or constant x
+    }
+    
+    let slope = (n * sum_xy - sum_x * sum_y) / denominator;
+    let intercept = (sum_y - slope * sum_x) / n;
+    
+    // Calculate R-squared
+    let mean_y = sum_y / n;
+    let ss_tot: f64 = pairs.iter().map(|&(_, yi)| (yi - mean_y).powi(2)).sum();
+    let ss_res: f64 = pairs.iter().map(|&(xi, yi)| (yi - (slope * xi + intercept)).powi(2)).sum();
+    let r_squared = if ss_tot.abs() < 1e-10 { 0.0 } else { 1.0 - ss_res / ss_tot };
+    
+    Some((slope, intercept, r_squared))
+}
+
+/// Helper function to calculate standard error of regression
+fn linear_regression_se(x: &[f64], y: &[f64], slope: f64, intercept: f64) -> Option<Vec<f64>> {
+    let n = x.len();
+    if n < 3 {
+        return None;
+    }
+    
+    let pairs: Vec<(f64, f64)> = x.iter().zip(y.iter())
+        .filter(|(&xi, &yi)| !xi.is_nan() && !yi.is_nan())
+        .map(|(&xi, &yi)| (xi, yi))
+        .collect();
+    
+    if pairs.len() < 3 {
+        return None;
+    }
+    
+    let n = pairs.len() as f64;
+    let residuals: Vec<f64> = pairs.iter().map(|&(xi, yi)| yi - (slope * xi + intercept)).collect();
+    let sse: f64 = residuals.iter().map(|&r| r * r).sum();
+    let mse = sse / (n - 2.0);
+    
+    let sum_x: f64 = pairs.iter().map(|&(xi, _)| xi).sum();
+    let sum_x2: f64 = pairs.iter().map(|&(xi, _)| xi * xi).sum();
+    let sxx = sum_x2 - sum_x * sum_x / n;
+    
+    if sxx.abs() < 1e-10 {
+        return None;
+    }
+    
+    let se_slope = (mse / sxx).sqrt();
+    let se_intercept = (mse * (1.0 / n + sum_x * sum_x / (n * n * sxx))).sqrt();
+    
+    Some(vec![se_slope, se_intercept])
+}
+
 /// 4. render_svg(plot)
 /// Materializes the plot spec dictionary and shared Arrow DataFrame into a finished SVG string.
 #[hayashi_fn]
@@ -915,7 +1111,24 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         }
     }
 
-    // 5. Apply log transformation if needed
+    // 5. Check for coord_flip
+    let coord_flip = if let Some(HayashiValue::Dict(coords)) = plot.get("coords") {
+        coords.get("flip").and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        }).unwrap_or(false)
+    } else {
+        false
+    };
+
+    // Swap x and y if coord_flip is true
+    let (x_values, y_values, x_label, y_label) = if coord_flip {
+        (y_values, x_values, y_label, x_label)
+    } else {
+        (x_values, y_values, x_label, y_label)
+    };
+
+    // 6. Apply log transformation if needed
     let x_values: Vec<f64> = if x_log {
         x_values.iter().map(|&v| if v.is_nan() || v <= 0.0 { f64::NAN } else { v.log10() }).collect()
     } else {
@@ -940,7 +1153,56 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
     let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
     
-    // 7. Get dimensions from spec or use defaults
+    // 7. Apply scale limits if specified
+    let (x_min, x_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+        if let Some(HayashiValue::List(limits)) = scales.get("x_limits") {
+            if limits.len() >= 2 {
+                let min = match &limits[0] {
+                    HayashiValue::Float(f) => *f,
+                    HayashiValue::Int(i) => *i as f64,
+                    _ => x_min,
+                };
+                let max = match &limits[1] {
+                    HayashiValue::Float(f) => *f,
+                    HayashiValue::Int(i) => *i as f64,
+                    _ => x_max,
+                };
+                (min, max)
+            } else {
+                (x_min, x_max)
+            }
+        } else {
+            (x_min, x_max)
+        }
+    } else {
+        (x_min, x_max)
+    };
+
+    let (y_min, y_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+        if let Some(HayashiValue::List(limits)) = scales.get("y_limits") {
+            if limits.len() >= 2 {
+                let min = match &limits[0] {
+                    HayashiValue::Float(f) => *f,
+                    HayashiValue::Int(i) => *i as f64,
+                    _ => y_min,
+                };
+                let max = match &limits[1] {
+                    HayashiValue::Float(f) => *f,
+                    HayashiValue::Int(i) => *i as f64,
+                    _ => y_max,
+                };
+                (min, max)
+            } else {
+                (y_min, y_max)
+            }
+        } else {
+            (y_min, y_max)
+        }
+    } else {
+        (y_min, y_max)
+    };
+    
+    // 8. Get dimensions from spec or use defaults
     let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
         let w = spec.get("width").and_then(|v| match v {
             HayashiValue::Int(i) => Some(*i as u32),
@@ -1388,6 +1650,95 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
                                 chart.draw_series(std::iter::once(
                                     PathElement::new(step_points, style.stroke_width(line_size as u32))
+                                )).map_err(|e| e.to_string())?;
+                            }
+                            "smooth" => {
+                                let style = parse_color(color_name);
+                                let line_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 2.0,
+                                };
+                                let method = match layer.get("method") {
+                                    Some(HayashiValue::Str(m)) => m.as_str(),
+                                    _ => "lm",
+                                };
+                                let show_se = match layer.get("se") {
+                                    Some(HayashiValue::Bool(b)) => *b,
+                                    _ => true,
+                                };
+
+                                if method == "lm" {
+                                    // Linear regression
+                                    if let Some((slope, intercept, _r2)) = linear_regression(&x_values, &y_values) {
+                                        // Calculate line endpoints
+                                        let y1 = slope * x_min + intercept;
+                                        let y2 = slope * x_max + intercept;
+
+                                        // Draw regression line
+                                        chart.draw_series(std::iter::once(
+                                            PathElement::new(
+                                                vec![(x_min, y1), (x_max, y2)],
+                                                style.stroke_width(line_size as u32)
+                                            )
+                                        )).map_err(|e| e.to_string())?;
+
+                                        // Draw confidence interval if requested
+                                        if show_se {
+                                            if let Some(se) = linear_regression_se(&x_values, &y_values, slope, intercept) {
+                                                let se_slope = se[0];
+                                                let se_intercept = se[1];
+                                                
+                                                // Approximate confidence band (simplified)
+                                                let ci_factor = 1.96; // 95% CI
+                                                let y1_upper = slope * x_min + intercept + ci_factor * (se_slope * x_min + se_intercept);
+                                                let y1_lower = slope * x_min + intercept - ci_factor * (se_slope * x_min + se_intercept);
+                                                let y2_upper = slope * x_max + intercept + ci_factor * (se_slope * x_max + se_intercept);
+                                                let y2_lower = slope * x_max + intercept - ci_factor * (se_slope * x_max + se_intercept);
+
+                                                // Draw confidence band as semi-transparent area
+                                                let band_color = style.color;
+                                                let band_style = RGBAColor(band_color.0, band_color.1, band_color.2, 0.2);
+                                                chart.draw_series(std::iter::once(
+                                                    Polygon::new(vec![
+                                                        (x_min, y1_lower),
+                                                        (x_max, y2_lower),
+                                                        (x_max, y2_upper),
+                                                        (x_min, y1_upper),
+                                                    ], band_style.filled())
+                                                )).map_err(|e| e.to_string())?;
+                                            }
+                                        }
+                                    }
+                                }
+                                // LOESS not implemented yet, skip silently
+                            }
+                            "text" => {
+                                let label = match layer.get("label") {
+                                    Some(HayashiValue::Str(l)) => l.clone(),
+                                    _ => "".to_string(),
+                                };
+                                let text_x = match layer.get("x") {
+                                    Some(HayashiValue::Float(x)) => *x,
+                                    Some(HayashiValue::Int(x)) => *x as f64,
+                                    _ => 0.0,
+                                };
+                                let text_y = match layer.get("y") {
+                                    Some(HayashiValue::Float(y)) => *y,
+                                    Some(HayashiValue::Int(y)) => *y as f64,
+                                    _ => 0.0,
+                                };
+                                let text_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 12.0,
+                                };
+                                let text_color_rgb = parse_color_to_rgb(color_name);
+
+                                // Draw text at specified coordinates using TextStyle
+                                let text_style = TextStyle::from(("sans-serif", text_size as i32)).color(&text_color_rgb);
+                                chart.draw_series(std::iter::once(
+                                    Text::new(label, (text_x, text_y), text_style)
                                 )).map_err(|e| e.to_string())?;
                             }
                             _ => {}
