@@ -59,8 +59,80 @@ pub fn geom_line(
     plot
 }
 
+/// 4. geom_bar(plot, color, width)
+/// Appends a bar chart geometry layer to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_bar(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    width: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("bar".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("width".to_string(), HayashiValue::Float(width));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
 
-/// 3. labs(plot, title, x, y)
+/// 5. geom_histogram(plot, color, bins)
+/// Appends a histogram geometry layer to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_histogram(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    bins: i64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("histogram".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("bins".to_string(), HayashiValue::Int(bins));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 6. geom_boxplot(plot, color, width)
+/// Appends a boxplot geometry layer to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_boxplot(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    width: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("boxplot".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("width".to_string(), HayashiValue::Float(width));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 7. geom_heatmap(plot, color, cell_size)
+/// Appends a heatmap geometry layer to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_heatmap(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    cell_size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("heatmap".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("cell_size".to_string(), HayashiValue::Float(cell_size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+
+/// 8. labs(plot, title, x, y)
 /// Adds plot title and custom axis labels to the plot spec dictionary.
 #[hayashi_fn]
 pub fn labs(
@@ -248,6 +320,152 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
                                             .map(|(&x, &y)| (x, y)),
                                         style.clone(),
                                     )
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            "bar" => {
+                                let style = parse_color(color_name);
+                                let bar_width = match layer.get("width") {
+                                    Some(HayashiValue::Float(w)) => *w,
+                                    Some(HayashiValue::Int(w)) => *w as f64,
+                                    _ => 0.8,
+                                };
+                                chart.draw_series(
+                                    x_values.iter().zip(y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| {
+                                            Rectangle::new([(x - bar_width/2.0, 0.0), (x + bar_width/2.0, y)], style.clone())
+                                        })
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            "histogram" => {
+                                let style = parse_color(color_name);
+                                let bins = match layer.get("bins") {
+                                    Some(HayashiValue::Int(b)) => *b as usize,
+                                    Some(HayashiValue::Float(b)) => *b as usize,
+                                    _ => 10,
+                                };
+
+                                // Calculate histogram from y_values
+                                let valid_values: Vec<f64> = y_values.iter().filter(|&&v| !v.is_nan()).cloned().collect();
+                                if valid_values.is_empty() {
+                                    return Err("No valid data for histogram".to_string());
+                                }
+
+                                let y_min = valid_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+                                let y_max = valid_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                                let bin_width = (y_max - y_min) / bins as f64;
+
+                                let mut histogram = vec![0usize; bins];
+                                for &val in &valid_values {
+                                    let bin_idx = ((val - y_min) / bin_width) as usize;
+                                    if bin_idx < bins {
+                                        histogram[bin_idx] += 1;
+                                    } else {
+                                        histogram[bins - 1] += 1;
+                                    }
+                                }
+
+                                chart.draw_series(
+                                    histogram.iter().enumerate()
+                                        .map(|(i, &count)| {
+                                            let x_center = y_min + (i as f64 + 0.5) * bin_width;
+                                            let bar_height = count as f64;
+                                            let bar_width = bin_width * 0.9;
+                                            Rectangle::new([(x_center - bar_width/2.0, 0.0), (x_center + bar_width/2.0, bar_height)], style.clone())
+                                        })
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            "boxplot" => {
+                                let style = parse_color(color_name);
+                                let box_width = match layer.get("width") {
+                                    Some(HayashiValue::Float(w)) => *w,
+                                    Some(HayashiValue::Int(w)) => *w as f64,
+                                    _ => 0.5,
+                                };
+
+                                // Calculate boxplot statistics from y_values
+                                let mut valid_values: Vec<f64> = y_values.iter().filter(|&&v| !v.is_nan()).cloned().collect();
+                                if valid_values.is_empty() {
+                                    return Err("No valid data for boxplot".to_string());
+                                }
+
+                                valid_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                                let n = valid_values.len();
+
+                                let q1_idx = n / 4;
+                                let median_idx = n / 2;
+                                let q3_idx = 3 * n / 4;
+
+                                let q1 = valid_values[q1_idx];
+                                let median = valid_values[median_idx];
+                                let q3 = valid_values[q3_idx];
+                                let iqr = q3 - q1;
+                                let lower_whisker = valid_values.iter().find(|&&v| v >= q1 - 1.5 * iqr).unwrap_or(&valid_values[0]);
+                                let upper_whisker = valid_values.iter().rev().find(|&&v| v <= q3 + 1.5 * iqr).unwrap_or(&valid_values[n - 1]);
+
+                                // Use x position from first x value (boxplot is typically for single variable)
+                                let x_pos = if let Some(&x) = x_values.first() { x } else { 0.0 };
+
+                                // Draw boxplot components
+                                chart.draw_series(std::iter::once(Rectangle::new([
+                                    (x_pos - box_width/2.0, q1),
+                                    (x_pos + box_width/2.0, q3)
+                                ], style.clone()))).map_err(|e| e.to_string())?;
+
+                                // Draw median line
+                                chart.draw_series(std::iter::once(PathElement::new(
+                                    vec![(x_pos - box_width/2.0, median), (x_pos + box_width/2.0, median)],
+                                    BLACK.stroke_width(2)
+                                ))).map_err(|e| e.to_string())?;
+
+                                // Draw whisker lines
+                                chart.draw_series(std::iter::once(PathElement::new(
+                                    vec![(x_pos, q3), (x_pos, *upper_whisker)],
+                                    style.stroke_width(1)
+                                ))).map_err(|e| e.to_string())?;
+
+                                chart.draw_series(std::iter::once(PathElement::new(
+                                    vec![(x_pos, q1), (x_pos, *lower_whisker)],
+                                    style.stroke_width(1)
+                                ))).map_err(|e| e.to_string())?;
+
+                                // Draw whisker caps
+                                chart.draw_series(std::iter::once(PathElement::new(
+                                    vec![(x_pos - box_width/4.0, *upper_whisker), (x_pos + box_width/4.0, *upper_whisker)],
+                                    style.stroke_width(1)
+                                ))).map_err(|e| e.to_string())?;
+
+                                chart.draw_series(std::iter::once(PathElement::new(
+                                    vec![(x_pos - box_width/4.0, *lower_whisker), (x_pos + box_width/4.0, *lower_whisker)],
+                                    style.stroke_width(1)
+                                ))).map_err(|e| e.to_string())?;
+                            }
+                            "heatmap" => {
+                                let base_color = parse_color(color_name);
+                                let cell_size = match layer.get("cell_size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 1.0,
+                                };
+
+                                // Normalize y_values to [0, 1] for color intensity
+                                let valid_values: Vec<f64> = y_values.iter().filter(|&&v| !v.is_nan()).cloned().collect();
+                                if valid_values.is_empty() {
+                                    return Err("No valid data for heatmap".to_string());
+                                }
+
+                                let y_min = valid_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+                                let y_max = valid_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                                let range = y_max - y_min;
+
+                                chart.draw_series(
+                                    x_values.iter().zip(y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| {
+                                            let intensity = if range > 0.0 { (y - y_min) / range } else { 0.5 };
+                                            let mixed_color = base_color.color.mix(intensity);
+                                            Rectangle::new([(x - cell_size/2.0, y - cell_size/2.0), (x + cell_size/2.0, y + cell_size/2.0)], mixed_color.filled())
+                                        })
                                 ).map_err(|e| e.to_string())?;
                             }
                             _ => {}

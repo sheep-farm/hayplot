@@ -1,0 +1,23 @@
+// Heatmap Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/heatmap.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a 2D grid dataset (e.g., temperature readings across locations)
+let data = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0], "y": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0], "temperature": [20.0, 25.0, 30.0, 22.0, 28.0, 35.0, 18.0, 24.0, 32.0]}
+let df = dataframe(data)
+
+// 2. Build the heatmap specification
+print("Building heatmap...")
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+        |> gg::geom_heatmap("red", 0.8)
+        |> gg::labs("Temperature Heatmap", "X Location", "Y Location")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "heatmap.svg")
+print("Plot successfully saved to 'heatmap.svg'!")

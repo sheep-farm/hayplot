@@ -14,6 +14,10 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `hayplot(df: DataFrame, aes: Dict) -> Dict`: Initializes the plot specification with a DataFrame and aesthetic mapping (e.g., `aes={"x": "gdp", "y": "life_exp"}`).
 - `geom_point(plot: Dict, color: String, size: Float) -> Dict`: Appends a scatter plot layer to the specification.
 - `geom_line(plot: Dict, color: String, size: Float) -> Dict`: Appends a line series layer to the specification. Can be combined with `geom_point` to produce line+dot charts.
+- `geom_bar(plot: Dict, color: String, width: Float) -> Dict`: Appends a bar chart layer to the specification.
+- `geom_histogram(plot: Dict, color: String, bins: Int) -> Dict`: Appends a histogram layer to the specification. Automatically calculates frequency distribution from y-values.
+- `geom_boxplot(plot: Dict, color: String, width: Float) -> Dict`: Appends a boxplot layer to the specification. Displays quartiles, median, and whiskers (1.5×IQR).
+- `geom_heatmap(plot: Dict, color: String, cell_size: Float) -> Dict`: Appends a heatmap layer to the specification. Color intensity based on y-value normalization.
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
@@ -63,6 +67,70 @@ let plot = gg::hayplot(df, {"x": "month", "y": "sales"})
 
 let svg_content = gg::render_svg(plot)
 write(svg_content, "sales_growth.svg")
+```
+
+**Bar chart:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"category": [1.0, 2.0, 3.0, 4.0, 5.0], "sales": [150.0, 230.0, 180.0, 320.0, 290.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "category", "y": "sales"})
+    |> gg::geom_bar("blue", 0.6)
+    |> gg::labs("Sales by Category", "Category", "Sales (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "bar_chart.svg")
+```
+
+**Histogram:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"dummy": [1.0, 1.0, 1.0, 1.0, 1.0], "scores": [65.0, 72.0, 78.0, 85.0, 88.0, 90.0, 92.0, 95.0, 78.0, 82.0, 75.0, 88.0, 91.0, 84.0, 79.0, 86.0, 93.0, 77.0, 83.0, 89.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "dummy", "y": "scores"})
+    |> gg::geom_histogram("green", 15)
+    |> gg::labs("Distribution of Test Scores", "Score", "Frequency")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "histogram.svg")
+```
+
+**Boxplot:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"department": [1.0, 1.0, 1.0, 1.0, 1.0], "salary": [45000.0, 52000.0, 48000.0, 61000.0, 55000.0, 58000.0, 49000.0, 63000.0, 51000.0, 57000.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "department", "y": "salary"})
+    |> gg::geom_boxplot("red", 0.4)
+    |> gg::labs("Salary Distribution", "Department", "Salary (USD)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "boxplot.svg")
+```
+
+**Heatmap:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0], "y": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0], "temperature": [20.0, 25.0, 30.0, 22.0, 28.0, 35.0, 18.0, 24.0, 32.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_heatmap("red", 0.8)
+    |> gg::labs("Temperature Heatmap", "X Location", "Y Location")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "heatmap.svg")
 ```
 
 ## License

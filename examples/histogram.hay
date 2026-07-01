@@ -1,0 +1,23 @@
+// Histogram Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/histogram.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a dataset with distribution (e.g., test scores)
+let data = {"dummy": [1.0, 1.0, 1.0, 1.0, 1.0], "scores": [65.0, 72.0, 78.0, 85.0, 88.0, 90.0, 92.0, 95.0, 78.0, 82.0, 75.0, 88.0, 91.0, 84.0, 79.0, 86.0, 93.0, 77.0, 83.0, 89.0]}
+let df = dataframe(data)
+
+// 2. Build the histogram specification with 15 bins
+print("Building histogram...")
+let plot = gg::hayplot(df, {"x": "dummy", "y": "scores"})
+        |> gg::geom_histogram("green", 15)
+        |> gg::labs("Distribution of Test Scores", "Score", "Frequency")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "histogram.svg")
+print("Plot successfully saved to 'histogram.svg'!")
