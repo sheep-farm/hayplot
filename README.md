@@ -23,17 +23,21 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_vline(plot: Dict, color: String, size: Float, xintercept: Float) -> Dict`: Appends a vertical reference line at xintercept.
 - `geom_abline(plot: Dict, color: String, size: Float, slope: Float, intercept: Float) -> Dict`: Appends a diagonal reference line (y = slope * x + intercept).
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
+- `geom_smooth(plot: Dict, color: String, size: Float, method: String, se: Bool) -> Dict`: Appends a smoothed conditional mean (linear regression or LOESS). method: "lm" for linear regression. se: whether to show standard error bands.
+- `geom_text(plot: Dict, label: String, x: Float, y: Float, color: String, size: Float) -> Dict`: Adds text annotations at specified coordinates.
 - `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
 - `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
+- `scale_x_continuous(plot: Dict, limits: List, breaks: List, labels: List) -> Dict`: Sets continuous scale options for x-axis: limits, breaks, and labels.
+- `scale_y_continuous(plot: Dict, limits: List, breaks: List, labels: List) -> Dict`: Sets continuous scale options for y-axis: limits, breaks, and labels.
 - `filter_data(df: DataFrame, col: String, value: Float) -> Result<DataFrame, String>`: Filters a DataFrame to rows where `col` equals `value`. Use for manual faceting.
 - `set_dimensions(plot: Dict, width: Int, height: Int) -> Dict`: Sets SVG output dimensions in pixels. Default is 800x600.
 - `set_margins(plot: Dict, top: Int, bottom: Int, left: Int, right: Int) -> Dict`: Sets plot margins in pixels. Default is 20px on all sides.
 - `set_background_color(plot: Dict, color: String) -> Dict`: Sets the background color. Default is white. Accepts named colors or hex codes.
 - `set_grid(plot: Dict, show_grid: Bool) -> Dict`: Enables or disables the grid. Default is true.
+- `coord_flip(plot: Dict) -> Dict`: Flips the Cartesian coordinates, switching x and y axes.
+- `theme_element_text(plot: Dict, family: String, size: Float, color: String) -> Dict`: Sets text theme properties (font family, size, color).
 - `save_svg(plot: Dict, filename: String) -> Result<String, String>`: Renders and saves the plot to a file in one step. Returns SVG content.
 - `save_png(plot: Dict, filename: String) -> Result<String, String>`: Renders and saves the plot as PNG. Requires "png" feature. Returns base64-encoded PNG data.
-- `facet_wrap(plot: Dict, group_col: String) -> Dict`: [DEPRECATED] Kept for compatibility. Use `filter_data()` instead.
-- `render_facets(plot: Dict) -> Result<List<String>, String>`: [DEPRECATED] Kept for compatibility. Use `filter_data()` + manual calls instead.
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
