@@ -137,7 +137,7 @@
 \newcommand{\hayplot}{\textbf{hayplot}}
 
 % ── Metadados da versão ─────────────────────────────────────────────────────
-\newcommand{\hayversiontag}{v0.3.0}
+\newcommand{\hayversiontag}{v0.5.0}
 \newcommand{\hayashiversiontag}{0.2.6}
 
 % ============================================================
@@ -609,6 +609,203 @@ let plot = gg::hayplot(df, {"x": "coord_x", "y": "coord_y"})
 \end{lstlisting}
 
 % ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_area(plot, color, size)} --- Camada de Área}
+\index{geom\_area()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma camada de gráfico de área à especificação. Preenche a área sob a linha
+conectando os pontos, ordenando automaticamente por $x$. Ideal para visualizar valores
+acumulados, volume ao longo do tempo ou PnL.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_area(plot: Dict, color: String, size: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}  & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color} & \code{String} & Cor da área e da linha. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{size}  & \code{Float}  & Espessura da linha de contorno. Valores recomendados: 1.0--3.0. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} da especificação com a camada de área adicionada ao
+campo \code{"layers"}.
+
+\subsection*{Comportamento}
+
+Os pontos são automaticamente ordenados por $x$ antes do rendering. A área é
+preenchida usando uma aproximação por polígonos entre pontos consecutivos, com
+base em $y=0$ como limite inferior.
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Gráfico de área para receita acumulada}]
+let plot = gg::hayplot(df, {"x": "mes", "y": "receita_acumulada"})
+           |> gg::geom_area("blue", 2.0)
+           |> gg::labs("Receita Acumulada", "Mês", "Receita (milhares)")
+\end{lstlisting}
+
+\begin{tipbox}[title={\textbf{Dica:} Ordenação automática}]
+  Diferente de \code{geom\_line}, \code{geom\_area} ordena automaticamente os pontos
+  por $x$ antes de renderizar, garantindo que a área seja preenchida corretamente
+  mesmo se os dados não estiverem ordenados.
+\end{tipbox}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_hline(plot, color, size, yintercept)} --- Linha Horizontal}
+\index{geom\_hline()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma linha horizontal de referência ao gráfico em um valor $y$ específico.
+Ideal para marcar thresholds, limites de risco, médias ou valores alvo.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_hline(plot: Dict, color: String, size: Float, yintercept: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}       & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color}      & \code{String} & Cor da linha. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{size}       & \code{Float}  & Espessura da linha em pixels. Valores recomendados: 0.5--2.0. \\[4pt]
+  \code{yintercept} & \code{Float}  & Valor $y$ onde a linha horizontal será desenhada. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Linha horizontal de referência}]
+let plot = gg::hayplot(df, {"x": "tempo", "y": "valor"})
+           |> gg::geom_line("blue", 2.0)
+           |> gg::geom_hline("red", 1.0, 50.0)  // Linha em y=50
+           |> gg::labs("Métrica com Threshold", "Tempo", "Valor")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_vline(plot, color, size, xintercept)} --- Linha Vertical}
+\index{geom\_vline()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma linha vertical de referência ao gráfico em um valor $x$ específico.
+Ideal para marcar eventos, split de ações, marcos temporais ou pontos de corte.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_vline(plot: Dict, color: String, size: Float, xintercept: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}       & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color}      & \code{String} & Cor da linha. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{size}       & \code{Float}  & Espessura da linha em pixels. Valores recomendados: 0.5--2.0. \\[4pt]
+  \code{xintercept} & \code{Float}  & Valor $x$ onde a linha vertical será desenhada. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Linha vertical de evento}]
+let plot = gg::hayplot(df, {"x": "ano", "y": "receita"})
+           |> gg::geom_line("blue", 2.0)
+           |> gg::geom_vline("green", 1.0, 2020.0)  // Linha em x=2020
+           |> gg::labs("Receita com Evento Marcado", "Ano", "Receita")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_abline(plot, color, size, slope, intercept)} --- Linha Diagonal}
+\index{geom\_abline()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma linha diagonal de referência seguindo a equação $y = \text{slope} \times x + \text{intercept}$.
+Ideal para linhas de 45° (benchmark), tendências teóricas ou relações lineares esperadas.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_abline(plot: Dict, color: String, size: Float, slope: Float, intercept: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}      & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color}     & \code{String} & Cor da linha. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{size}      & \code{Float}  & Espessura da linha em pixels. Valores recomendados: 0.5--2.0. \\[4pt]
+  \code{slope}     & \code{Float}  & Coeficiente angular da linha. \\[4pt]
+  \code{intercept} & \code{Float}  & Intercepto da linha (valor em $y$ quando $x=0$). \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Linha diagonal de benchmark]}
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+           |> gg::geom_point("blue", 5.0)
+           |> gg::geom_abline("red", 1.0, 1.0, 0.0)  // Linha y = x
+           |> gg::labs("Observado vs. Esperado", "X", "Y")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_step(plot, color, size, direction)} --- Linha em Degrau}
+\index{geom\_step()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma linha em degrau conectando os pontos. Útil para funções de distribuição acumulada,
+preços discretos ou dados que mudam em passos. A direção controla se o degrau é horizontal-então-vertical
+(\texttt{"hv"}) ou vertical-então-horizontal (\texttt{"vh"}).
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}      & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color}     & \code{String} & Cor da linha. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{size}      & \code{Float}  & Espessura da linha em pixels. Valores recomendados: 1.0--3.0. \\[4pt]
+  \code{direction} & \code{String} & Direção do degrau: \code{"hv"} (horizontal-então-vertical) ou \code{"vh"} (vertical-então-horizontal). \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Gráfico de degrau para preços}]
+let plot = gg::hayplot(df, {"x": "tempo", "y": "preco"})
+           |> gg::geom_step("blue", 2.0, "hv")
+           |> gg::labs("Mudanças de Preço (Degrau)", "Tempo", "Preço")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
 \section{\texttt{labs(plot, title, x, y)} --- Rótulos}
 \index{labs()}
 % ────────────────────────────────────────────────────────────
@@ -1020,6 +1217,77 @@ write(svg_content, "heatmap.svg")
 print("Plot saved to 'heatmap.svg'!")
 \end{lstlisting}
 
+\section{Gráfico de Área}
+\index{exemplo!área}
+
+Visualização de valores acumulados com área preenchida:
+
+\begin{lstlisting}[caption={examples/area\_chart.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados de receita acumulada mensal
+let data = {"month": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+            "revenue": [10.0, 25.0, 45.0, 70.0, 100.0, 135.0, 175.0, 220.0,
+                        270.0, 325.0, 385.0, 450.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "month", "y": "revenue"})
+    |> gg::geom_area("blue", 2.0)
+    |> gg::labs("Cumulative Revenue Over Time", "Month", "Revenue (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "area_chart.svg")
+print("Plot saved to 'area_chart.svg'!")
+\end{lstlisting}
+
+\section{Linhas de Referência}
+\index{exemplo!linhas de referência}
+
+Combinação de linhas horizontais, verticais e diagonais para anotações:
+
+\begin{lstlisting}[caption={examples/reference\_lines.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados de vendas mensais
+let data = {"month": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+            "sales": [10.5, 12.0, 11.2, 14.8, 16.5, 15.0, 18.2, 21.0,
+                        19.5, 22.8, 25.0, 24.2]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "month", "y": "sales"})
+    |> gg::geom_line("blue", 2.0)
+    |> gg::geom_hline("red", 1.0, 15.0)    // Horizontal line at y=15
+    |> gg::geom_vline("green", 1.0, 6.0)   // Vertical line at x=6
+    |> gg::geom_abline("magenta", 1.0, 1.5, 8.0)  // Diagonal line: y = 1.5x + 8
+    |> gg::labs("Sales with Reference Lines", "Month", "Sales (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "reference_lines.svg")
+print("Plot saved to 'reference_lines.svg'!")
+\end{lstlisting}
+
+\section{Gráfico de Degrau}
+\index{exemplo!degrau}
+
+Visualização de mudanças discretas com linhas em degrau:
+
+\begin{lstlisting}[caption={examples/step\_chart.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados de preços em tempo discreto
+let data = {"time": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            "price": [100.0, 105.0, 103.0, 108.0, 106.0, 110.0, 109.0, 112.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "time", "y": "price"})
+    |> gg::geom_step("blue", 2.0, "hv")  // horizontal then vertical
+    |> gg::labs("Price Changes (Step Chart)", "Time", "Price")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "step_chart.svg")
+print("Plot saved to 'step_chart.svg'!")
+\end{lstlisting}
+
 % ============================================================
 \chapter{Arquitetura Técnica}
 % ============================================================
@@ -1170,12 +1438,18 @@ no loop de layers.
     v0.3.0 & \code{geom\_histogram} --- histograma                              & $\checkmark$ Conclu\'{i}do \\
     v0.3.0 & \code{geom\_boxplot} --- box-and-whisker                           & $\checkmark$ Conclu\'{i}do \\
     v0.3.0 & \code{geom\_heatmap} --- mapa de calor 2D                           & $\checkmark$ Conclu\'{i}do \\
-    v0.4.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & Planejado \\
-    v0.4.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & Planejado \\
-    v0.4.0 & \code{facet\_wrap} --- painéis por grupo                           & Planejado \\
-    v0.5.0 & Saída PNG (via feature \code{png\_backend})                        & Futuro \\
-    v0.5.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
-    v0.6.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
+    v0.4.0 & \code{geom\_area} --- área preenchida sob linha                    & $\checkmark$ Conclu\'{i}do \\
+    v0.5.0 & \code{geom\_hline} --- linha horizontal                             & $\checkmark$ Conclu\'{i}do \\
+    v0.5.0 & \code{geom\_vline} --- linha vertical                               & $\checkmark$ Conclu\'{i}do \\
+    v0.5.0 & \code{geom\_abline} --- linha diagonal                               & $\checkmark$ Conclu\'{i}do \\
+    v0.5.0 & \code{geom\_step} --- linhas em degrau                              & $\checkmark$ Conclu\'{i}do \\
+    v0.6.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & Planejado \\
+    v0.6.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & Planejado \\
+    v0.6.0 & \code{facet\_wrap} --- painéis por grupo                           & Planejado \\
+    v0.7.0 & Saída PNG (via feature \code{png\_backend})                        & Futuro \\
+    v0.7.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
+    v0.7.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
+    v0.8.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
     \bottomrule
   \end{tabularx}
 \end{center}
@@ -1197,6 +1471,11 @@ no loop de layers.
     \code{geom\_histogram(plot, color, bins)}     & \code{Dict, String, Int}            & Adiciona camada de histograma (distribuição) \\[3pt]
     \code{geom\_boxplot(plot, color, width)}       & \code{Dict, String, Float}          & Adiciona camada de boxplot (quartis, mediana) \\[3pt]
     \code{geom\_heatmap(plot, color, cell\_size)}  & \code{Dict, String, Float}          & Adiciona camada de heatmap (intensidade de cor) \\[3pt]
+    \code{geom\_area(plot, color, size)}           & \code{Dict, String, Float}          & Adiciona camada de área preenchida sob linha \\[3pt]
+    \code{geom\_hline(plot, color, size, yint)}    & \code{Dict, String, Float, Float}  & Adiciona linha horizontal em yintercept \\[3pt]
+    \code{geom\_vline(plot, color, size, xint)}    & \code{Dict, String, Float, Float}  & Adiciona linha vertical em xintercept \\[3pt]
+    \code{geom\_abline(plot, color, size, slope, int)} & \code{Dict, String, Float, Float, Float} & Adiciona linha diagonal $y = \text{slope} \cdot x + \text{int}$ \\[3pt]
+    \code{geom\_step(plot, color, size, dir)}     & \code{Dict, String, Float, String} & Adiciona linha em degrau (hv/vh) \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule

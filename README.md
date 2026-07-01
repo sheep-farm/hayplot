@@ -18,6 +18,11 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_histogram(plot: Dict, color: String, bins: Int) -> Dict`: Appends a histogram layer to the specification. Automatically calculates frequency distribution from y-values.
 - `geom_boxplot(plot: Dict, color: String, width: Float) -> Dict`: Appends a boxplot layer to the specification. Displays quartiles, median, and whiskers (1.5×IQR).
 - `geom_heatmap(plot: Dict, color: String, cell_size: Float) -> Dict`: Appends a heatmap layer to the specification. Color intensity based on y-value normalization.
+- `geom_area(plot: Dict, color: String, size: Float) -> Dict`: Appends an area plot layer to the specification. Fills area under the line, useful for cumulative values.
+- `geom_hline(plot: Dict, color: String, size: Float, yintercept: Float) -> Dict`: Appends a horizontal reference line at yintercept.
+- `geom_vline(plot: Dict, color: String, size: Float, xintercept: Float) -> Dict`: Appends a vertical reference line at xintercept.
+- `geom_abline(plot: Dict, color: String, size: Float, slope: Float, intercept: Float) -> Dict`: Appends a diagonal reference line (y = slope * x + intercept).
+- `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
@@ -131,6 +136,57 @@ let plot = gg::hayplot(df, {"x": "x", "y": "y"})
 
 let svg_content = gg::render_svg(plot)
 write(svg_content, "heatmap.svg")
+```
+
+**Area chart:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"month": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], "revenue": [10.0, 25.0, 45.0, 70.0, 100.0, 135.0, 175.0, 220.0, 270.0, 325.0, 385.0, 450.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "month", "y": "revenue"})
+    |> gg::geom_area("blue", 2.0)
+    |> gg::labs("Cumulative Revenue Over Time", "Month", "Revenue (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "area_chart.svg")
+```
+
+**Reference lines:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"month": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], "sales": [10.5, 12.0, 11.2, 14.8, 16.5, 15.0, 18.2, 21.0, 19.5, 22.8, 25.0, 24.2]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "month", "y": "sales"})
+    |> gg::geom_line("blue", 2.0)
+    |> gg::geom_hline("red", 1.0, 15.0)    // Horizontal line at y=15
+    |> gg::geom_vline("green", 1.0, 6.0)   // Vertical line at x=6
+    |> gg::geom_abline("magenta", 1.0, 1.5, 8.0)  // Diagonal line: y = 1.5x + 8
+    |> gg::labs("Sales with Reference Lines", "Month", "Sales (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "reference_lines.svg")
+```
+
+**Step chart:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"time": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], "price": [100.0, 105.0, 103.0, 108.0, 106.0, 110.0, 109.0, 112.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "time", "y": "price"})
+    |> gg::geom_step("blue", 2.0, "hv")  // horizontal then vertical
+    |> gg::labs("Price Changes (Step Chart)", "Time", "Price")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "step_chart.svg")
 ```
 
 ## License

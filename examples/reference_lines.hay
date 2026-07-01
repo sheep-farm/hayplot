@@ -1,0 +1,26 @@
+// Reference Lines Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/reference_lines.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a time series dataset
+let data = {"month": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], "sales": [10.5, 12.0, 11.2, 14.8, 16.5, 15.0, 18.2, 21.0, 19.5, 22.8, 25.0, 24.2]}
+let df = dataframe(data)
+
+// 2. Build the plot with reference lines
+print("Building plot with reference lines...")
+let plot = gg::hayplot(df, {"x": "month", "y": "sales"})
+        |> gg::geom_line("blue", 2.0)
+        |> gg::geom_hline("red", 1.0, 15.0)    // Horizontal line at y=15
+        |> gg::geom_vline("green", 1.0, 6.0)   // Vertical line at x=6
+        |> gg::geom_abline("magenta", 1.0, 1.5, 8.0)  // Diagonal line: y = 1.5x + 8
+        |> gg::labs("Sales with Reference Lines", "Month", "Sales (Thousands)")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "reference_lines.svg")
+print("Plot successfully saved to 'reference_lines.svg'!")

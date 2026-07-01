@@ -1,0 +1,23 @@
+// Step Chart Example using hayplot
+// Run this from the root of the hayplot repository:
+// hay examples/step_chart.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// 1. Create a dataset (e.g., discrete price changes)
+let data = {"time": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], "price": [100.0, 105.0, 103.0, 108.0, 106.0, 110.0, 109.0, 112.0]}
+let df = dataframe(data)
+
+// 2. Build the step chart specification (horizontal then vertical)
+print("Building step chart...")
+let plot = gg::hayplot(df, {"x": "time", "y": "price"})
+        |> gg::geom_step("blue", 2.0, "hv")
+        |> gg::labs("Price Changes (Step Chart)", "Time", "Price")
+
+// 3. Render to SVG
+print("Rendering to SVG...")
+let svg_content = gg::render_svg(plot)
+
+// 4. Save to file
+write(svg_content, "step_chart.svg")
+print("Plot successfully saved to 'step_chart.svg'!")

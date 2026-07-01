@@ -131,8 +131,107 @@ pub fn geom_heatmap(
     plot
 }
 
+/// 8. geom_area(plot, color, size)
+/// Appends an area plot geometry layer to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_area(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("area".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
 
-/// 8. labs(plot, title, x, y)
+/// 9. geom_hline(plot, color, size, yintercept)
+/// Appends a horizontal reference line to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_hline(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    yintercept: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("hline".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("yintercept".to_string(), HayashiValue::Float(yintercept));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 10. geom_vline(plot, color, size, xintercept)
+/// Appends a vertical reference line to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_vline(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    xintercept: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("vline".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("xintercept".to_string(), HayashiValue::Float(xintercept));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 11. geom_abline(plot, color, size, slope, intercept)
+/// Appends a diagonal reference line (y = slope * x + intercept) to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_abline(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    slope: f64,
+    intercept: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("abline".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("slope".to_string(), HayashiValue::Float(slope));
+        layer.insert("intercept".to_string(), HayashiValue::Float(intercept));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 12. geom_step(plot, color, size, direction)
+/// Appends a step line (horizontal then vertical segments) to the plot spec dictionary.
+#[hayashi_fn]
+pub fn geom_step(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    direction: String
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("step".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("direction".to_string(), HayashiValue::Str(direction));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 12. labs(plot, title, x, y)
 /// Adds plot title and custom axis labels to the plot spec dictionary.
 #[hayashi_fn]
 pub fn labs(
@@ -467,6 +566,181 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
                                             Rectangle::new([(x - cell_size/2.0, y - cell_size/2.0), (x + cell_size/2.0, y + cell_size/2.0)], mixed_color.filled())
                                         })
                                 ).map_err(|e| e.to_string())?;
+                            }
+                            "area" => {
+                                let style = parse_color(color_name);
+                                let line_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 2.0,
+                                };
+
+                                // Sort by x for proper area rendering
+                                let mut points: Vec<(f64, f64)> = x_values.iter().zip(y_values.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
+                                points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+                                if points.is_empty() {
+                                    return Err("No valid data for area plot".to_string());
+                                }
+
+                                // Draw filled area using rectangles as approximation
+                                for i in 0..points.len()-1 {
+                                    let (x1, y1) = points[i];
+                                    let (x2, y2) = points[i+1];
+                                    let rect_points = vec![
+                                        (x1, 0.0),
+                                        (x1, y1),
+                                        (x2, y2),
+                                        (x2, 0.0)
+                                    ];
+                                    chart.draw_series(std::iter::once(
+                                        Polygon::new(rect_points, style.clone())
+                                    )).map_err(|e| e.to_string())?;
+                                }
+
+                                // Draw line on top using PathElement
+                                chart.draw_series(std::iter::once(
+                                    PathElement::new(points, style.stroke_width(line_size as u32))
+                                )).map_err(|e| e.to_string())?;
+                            }
+                            "hline" => {
+                                let style = parse_color(color_name);
+                                let line_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 1.0,
+                                };
+                                let yintercept = match layer.get("yintercept") {
+                                    Some(HayashiValue::Float(y)) => *y,
+                                    Some(HayashiValue::Int(y)) => *y as f64,
+                                    _ => 0.0,
+                                };
+
+                                // Draw horizontal line across the chart
+                                chart.draw_series(std::iter::once(
+                                    PathElement::new(
+                                        vec![(x_min, yintercept), (x_max, yintercept)],
+                                        style.stroke_width(line_size as u32)
+                                    )
+                                )).map_err(|e| e.to_string())?;
+                            }
+                            "vline" => {
+                                let style = parse_color(color_name);
+                                let line_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 1.0,
+                                };
+                                let xintercept = match layer.get("xintercept") {
+                                    Some(HayashiValue::Float(x)) => *x,
+                                    Some(HayashiValue::Int(x)) => *x as f64,
+                                    _ => 0.0,
+                                };
+
+                                // Draw vertical line across the chart
+                                chart.draw_series(std::iter::once(
+                                    PathElement::new(
+                                        vec![(xintercept, y_min), (xintercept, y_max)],
+                                        style.stroke_width(line_size as u32)
+                                    )
+                                )).map_err(|e| e.to_string())?;
+                            }
+                            "abline" => {
+                                let style = parse_color(color_name);
+                                let line_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 1.0,
+                                };
+                                let slope = match layer.get("slope") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 1.0,
+                                };
+                                let intercept = match layer.get("intercept") {
+                                    Some(HayashiValue::Float(i)) => *i,
+                                    Some(HayashiValue::Int(i)) => *i as f64,
+                                    _ => 0.0,
+                                };
+
+                                // Calculate line endpoints at chart boundaries
+                                let y1 = slope * x_min + intercept;
+                                let y2 = slope * x_max + intercept;
+
+                                chart.draw_series(std::iter::once(
+                                    PathElement::new(
+                                        vec![(x_min, y1), (x_max, y2)],
+                                        style.stroke_width(line_size as u32)
+                                    )
+                                )).map_err(|e| e.to_string())?;
+                            }
+                            "step" => {
+                                let style = parse_color(color_name);
+                                let line_size = match layer.get("size") {
+                                    Some(HayashiValue::Float(s)) => *s,
+                                    Some(HayashiValue::Int(s)) => *s as f64,
+                                    _ => 2.0,
+                                };
+                                let direction = match layer.get("direction") {
+                                    Some(HayashiValue::Str(d)) => d.as_str(),
+                                    _ => "hv",
+                                };
+
+                                // Sort by x for proper step rendering
+                                let mut points: Vec<(f64, f64)> = x_values.iter().zip(y_values.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
+                                points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+                                if points.is_empty() {
+                                    return Err("No valid data for step plot".to_string());
+                                }
+
+                                // Create step points based on direction
+                                let mut step_points = Vec::new();
+                                match direction {
+                                    "hv" => {
+                                        // Horizontal then vertical
+                                        for i in 0..points.len() {
+                                            let (x, y) = points[i];
+                                            if i > 0 {
+                                                let (_prev_x, prev_y) = points[i-1];
+                                                step_points.push((x, prev_y));
+                                            }
+                                            step_points.push((x, y));
+                                        }
+                                    }
+                                    "vh" => {
+                                        // Vertical then horizontal
+                                        for i in 0..points.len() {
+                                            let (x, y) = points[i];
+                                            if i > 0 {
+                                                let (prev_x, _) = points[i-1];
+                                                step_points.push((prev_x, y));
+                                            }
+                                            step_points.push((x, y));
+                                        }
+                                    }
+                                    _ => {
+                                        // Default to hv
+                                        for i in 0..points.len() {
+                                            let (x, y) = points[i];
+                                            if i > 0 {
+                                                let (_prev_x, prev_y) = points[i-1];
+                                                step_points.push((x, prev_y));
+                                            }
+                                            step_points.push((x, y));
+                                        }
+                                    }
+                                }
+
+                                chart.draw_series(std::iter::once(
+                                    PathElement::new(step_points, style.stroke_width(line_size as u32))
+                                )).map_err(|e| e.to_string())?;
                             }
                             _ => {}
                         }
