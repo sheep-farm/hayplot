@@ -1,0 +1,14 @@
+import("sheep-farm/hayplot" as= gg)
+
+// Teste simples com dados internos (sem carregar arquivo externo)
+// Criar DataFrame manualmente com dados de teste
+
+// Por enquanto, vamos apenas testar que a compilação funciona
+// Para testar a funcionalidade real, precisamos de dados externos
+
+// Simples teste de funcionalidade existente
+let plot = gg :: hayplot ([] , {"x": "x", "y": "y"})
+    |> gg :: geom_point ("blue", 2.0)
+
+let svg = gg :: render_svg (plot)
+write (svg , "did_test.svg")
