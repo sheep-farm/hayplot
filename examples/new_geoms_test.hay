@@ -1,44 +1,72 @@
 // New geoms test: ribbon, col, path, jitter, density, violin
 
-// geom_ribbon: confidence band
-let df = df_read_csv("data/regression.csv")
-let plot1 = gg::hayplot(df, {"x": "x", "y": "y"})
+import("sheep-farm/hayplot", as=gg)
+
+// === geom_ribbon: confidence band ===
+let data1 = {
+    "x":    [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+    "y":    [10.0, 12.0, 15.0, 14.0, 18.0, 20.0, 19.0, 22.0],
+    "ymin": [8.0, 10.0, 12.0, 11.0, 15.0, 17.0, 16.0, 19.0],
+    "ymax": [12.0, 14.0, 18.0, 17.0, 21.0, 23.0, 22.0, 25.0]
+}
+let df1 = dataframe(data1)
+let plot1 = gg::hayplot(df1, {"x": "x", "y": "y"})
     |> gg::geom_ribbon("gray", 1.0, "ymin", "ymax")
     |> gg::geom_line("blue", 2.0)
     |> gg::labs("Ribbon (CI band)", "X", "Y")
 let svg1 = gg::render_svg(plot1)
 write(svg1, "ribbon_test.svg")
 
-// geom_col: bar chart with explicit heights
-let df2 = df_read_csv("data/sales.csv")
+// === geom_col: bar chart with explicit heights ===
+let data2 = {
+    "month":   [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+    "revenue": [120.0, 150.0, 180.0, 200.0, 230.0, 260.0]
+}
+let df2 = dataframe(data2)
 let plot2 = gg::hayplot(df2, {"x": "month", "y": "revenue"})
     |> gg::geom_col("steelblue", 0.8)
     |> gg::labs("Column Chart", "Month", "Revenue")
 let svg2 = gg::render_svg(plot2)
 write(svg2, "col_test.svg")
 
-// geom_jitter: scatter with noise
-let df3 = df_read_csv("data/iris.csv")
-let plot3 = gg::hayplot(df3, {"x": "species", "y": "sepal_length"})
-    |> gg::aes_color("species")
-    |> gg::geom_jitter("auto", 3.0, 0.3, 0.0)
-    |> gg::labs("Jittered Scatter", "Species", "Sepal Length")
+// === geom_jitter: scatter with noise ===
+let data3 = {
+    "x":     [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 1.0, 2.0, 3.0],
+    "y":     [5.1, 4.9, 4.7, 6.0, 5.8, 6.5, 7.0, 6.8, 7.2, 5.5, 5.7, 6.2],
+    "group": ["a", "a", "a", "b", "b", "b", "c", "c", "c", "a", "b", "c"]
+}
+let df3 = dataframe(data3)
+let plot3 = gg::hayplot(df3, {"x": "x", "y": "y"})
+    |> gg::aes_color("group")
+    |> gg::geom_jitter("auto", 3.0, 0.3, 0.3)
+    |> gg::labs("Jittered Scatter", "Group", "Value")
 let svg3 = gg::render_svg(plot3)
 write(svg3, "jitter_test.svg")
 
-// geom_density: kernel density estimate
-let df4 = df_read_csv("data/returns.csv")
-let plot4 = gg::hayplot(df4, {"x": "index", "y": "returns"})
+// === geom_density: kernel density estimate ===
+let data4 = {
+    "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0,
+          4.5, 5.5, 5.0, 4.8, 5.2, 5.3, 4.9, 5.1, 5.4, 5.0],
+    "y": [2.0, 3.0, 4.0, 5.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0,
+          7.0, 8.0, 7.5, 7.2, 7.8, 7.3, 7.1, 7.6, 7.4, 7.5]
+}
+let df4 = dataframe(data4)
+let plot4 = gg::hayplot(df4, {"x": "x", "y": "y"})
     |> gg::geom_density("blue", 2.0, 0.0)
-    |> gg::labs("Density Estimate", "Returns", "Density")
+    |> gg::labs("Density Estimate", "X", "Density")
 let svg4 = gg::render_svg(plot4)
 write(svg4, "density_test.svg")
 
-// geom_violin: violin plot by group
-let df5 = df_read_csv("data/iris.csv")
-let plot5 = gg::hayplot(df5, {"x": "index", "y": "sepal_length"})
-    |> gg::aes_color("species")
+// === geom_violin: violin plot by group ===
+let data5 = {
+    "x":      [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 2.0],
+    "y":      [5.0, 5.5, 4.8, 5.2, 5.1, 8.0, 8.5, 7.8, 8.2, 8.1, 4.9, 7.9],
+    "group":  ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b", "a", "b"]
+}
+let df5 = dataframe(data5)
+let plot5 = gg::hayplot(df5, {"x": "x", "y": "y"})
+    |> gg::aes_color("group")
     |> gg::geom_violin("auto", 1.0)
-    |> gg::labs("Violin Plot", "Group", "Sepal Length")
+    |> gg::labs("Violin Plot", "Group", "Value")
 let svg5 = gg::render_svg(plot5)
 write(svg5, "violin_test.svg")

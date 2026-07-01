@@ -1,6 +1,12 @@
-// Theme test: compare all 4 themes
+// Theme test: compare all 4 themes with inline data
 
-let df = df_read_csv("data/economics.csv")
+import("sheep-farm/hayplot", as=gg)
+
+let data = {
+    "date": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+    "gdp":  [100.0, 105.0, 108.0, 115.0, 120.0, 125.0, 130.0, 138.0, 145.0, 152.0]
+}
+let df = dataframe(data)
 
 // theme_minimal: white bg, light gray grid, no border
 let p1 = gg::hayplot(df, {"x": "date", "y": "gdp"})

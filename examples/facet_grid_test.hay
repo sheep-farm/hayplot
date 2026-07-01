@@ -1,12 +1,20 @@
 // facet_grid test: 2D grid of sub-plots
 // Rows = cyl, Columns = gear
 
-let df = df_read_csv("data/mtcars.csv")
+import("sheep-farm/hayplot", as=gg)
+
+let data = {
+    "wt":   [2.6, 2.9, 3.2, 1.5, 1.8, 2.1, 3.5, 3.8, 1.2, 2.4, 1.6, 2.0],
+    "mpg":  [21.0, 19.0, 17.0, 33.0, 30.0, 27.0, 15.0, 14.0, 35.0, 25.0, 32.0, 28.0],
+    "cyl":  ["6", "6", "6", "4", "4", "4", "6", "6", "4", "4", "4", "4"],
+    "gear": ["4", "4", "4", "4", "4", "4", "3", "3", "5", "5", "5", "5"]
+}
+let df = dataframe(data)
 
 let plot = gg::hayplot(df, {"x": "wt", "y": "mpg"})
     |> gg::geom_point("auto", 4.0)
     |> gg::labs("MPG vs WT by Cyl/Gear", "Weight", "MPG")
     |> gg::facet_grid("cyl", "gear", "fixed")
-    |> gg::render_svg()
 
-df_write_file(plot, "output/facet_grid_test.svg")
+let svg = gg::render_svg(plot)
+write(svg, "facet_grid_test.svg")

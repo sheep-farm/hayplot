@@ -367,6 +367,46 @@ let svg_content = gg::render_svg(plot)
 write(svg_content, "log_scale.svg")
 ```
 
+**New geoms (ribbon, col, path, jitter, density, violin):**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+// geom_ribbon: confidence band
+let d1 = {"x": [1.0, 2.0, 3.0, 4.0], "y": [10.0, 12.0, 15.0, 14.0],
+          "ymin": [8.0, 10.0, 12.0, 11.0], "ymax": [12.0, 14.0, 18.0, 17.0]}
+let df1 = dataframe(d1)
+let p1 = gg::hayplot(df1, {"x": "x", "y": "y"})
+    |> gg::geom_ribbon("gray", 1.0, "ymin", "ymax")
+    |> gg::geom_line("blue", 2.0)
+let svg1 = gg::render_svg(p1)
+write(svg1, "ribbon.svg")
+
+// geom_col: bar chart with explicit heights
+let d2 = {"month": [1.0, 2.0, 3.0], "revenue": [120.0, 150.0, 180.0]}
+let df2 = dataframe(d2)
+let p2 = gg::hayplot(df2, {"x": "month", "y": "revenue"})
+    |> gg::geom_col("steelblue", 0.8)
+let svg2 = gg::render_svg(p2)
+write(svg2, "col.svg")
+
+// geom_density: kernel density estimate
+let d3 = {"x": [1.0, 2.0, 3.0, 4.0, 5.0, 4.5, 5.0, 4.8, 5.2],
+          "y": [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 7.5, 7.2, 7.8]}
+let df3 = dataframe(d3)
+let p3 = gg::hayplot(df3, {"x": "x", "y": "y"})
+    |> gg::geom_density("blue", 2.0, 0.0)
+let svg3 = gg::render_svg(p3)
+write(svg3, "density.svg")
+```
+
+`geom_ribbon(color, size, ymin_col, ymax_col)` — filled band between two columns.
+`geom_col(color, size)` — column chart, y is bar height.
+`geom_path(color, size)` — connects points in data order (not sorted by x).
+`geom_jitter(color, size, width, height)` — scatter with random jitter.
+`geom_density(color, size, bandwidth)` — Gaussian KDE, bandwidth=0 uses Silverman's rule.
+`geom_violin(color, size)` — mirrored density per group, requires `aes_color`.
+
 **Aesthetic color mapping (aes_color):**
 
 Color points by a categorical column — each unique value gets a different color:
@@ -374,7 +414,13 @@ Color points by a categorical column — each unique value gets a different colo
 ```text
 import("sheep-farm/hayplot", as=gg)
 
-let df = df_read_csv("data/iris.csv")
+let data = {
+    "sepal_length": [5.1, 4.9, 4.7, 6.0, 5.8, 6.5, 7.0, 6.8, 7.2],
+    "sepal_width":  [3.5, 3.0, 3.2, 2.8, 2.7, 3.0, 3.2, 3.1, 3.0],
+    "species": ["setosa", "setosa", "setosa", "versicolor", "versicolor", "versicolor",
+                "virginica", "virginica", "virginica"]
+}
+let df = dataframe(data)
 
 let plot = gg::hayplot(df, {"x": "sepal_length", "y": "sepal_width"})
     |> gg::aes_color("species")
@@ -396,7 +442,12 @@ Split data by a categorical column and arrange sub-plots in a wrapped grid:
 ```text
 import("sheep-farm/hayplot", as=gg)
 
-let df = df_read_csv("data/mtcars.csv")
+let data = {
+    "wt":  [2.6, 2.9, 3.2, 3.5, 3.8, 1.5, 1.8, 2.1, 2.4, 1.2, 1.6, 2.0],
+    "mpg": [21.0, 19.0, 17.0, 15.0, 14.0, 33.0, 30.0, 27.0, 25.0, 35.0, 32.0, 28.0],
+    "cyl": ["6", "6", "6", "6", "6", "4", "4", "4", "4", "4", "4", "4"]
+}
+let df = dataframe(data)
 
 let plot = gg::hayplot(df, {"x": "wt", "y": "mpg"})
     |> gg::geom_point("auto", 4.0)
@@ -429,6 +480,30 @@ let svg = gg::render_svg(plot)
 
 Supported geoms in facets: `point`, `line`, `bar`. Multiple x-series (comma-separated)
 with `color="auto"` are supported.
+
+**Themes:**
+
+Apply a preset theme to control background, grid, and axis styling:
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let data = {"x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [10.0, 15.0, 13.0, 20.0, 18.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_line("blue", 2.0)
+    |> gg::labs("My Plot", "X", "Y")
+    |> gg::theme_minimal()
+let svg = gg::render_svg(plot)
+write(svg, "themed.svg")
+```
+
+Available themes:
+- `theme_minimal()`: white background, light gray grid, no panel border
+- `theme_bw()`: white background, gray grid, black panel border
+- `theme_classic()`: white background, no grid, axis lines only
+- `theme_void()`: white background, no grid, no axis lines or labels
 
 **Manual faceting using filter_data:**
 
