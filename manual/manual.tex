@@ -137,7 +137,7 @@
 \newcommand{\hayplot}{\textbf{hayplot}}
 
 % ── Metadados da versão ─────────────────────────────────────────────────────
-\newcommand{\hayversiontag}{v0.1.0}
+\newcommand{\hayversiontag}{v0.3.0}
 \newcommand{\hayashiversiontag}{0.2.6}
 
 % ============================================================
@@ -280,7 +280,7 @@ A partir daí, todas as funções são acessadas com o prefixo \code{gg::}.
 \index{funções}
 % ============================================================
 
-\hayplot{} expõe quatro funções públicas. Cada uma recebe e retorna um
+\hayplot{} expõe oito funções públicas. Cada uma recebe e retorna um
 dicionário de especificação de plot (\textit{plot spec}), tornando a
 composição via pipe natural e segura.
 
@@ -420,6 +420,192 @@ let plot = gg::hayplot(df, {"x": "mes", "y": "vendas"})
            |> gg::geom_line("blue", 3.0)    // linha primeiro
            |> gg::geom_point("red", 6.0)   // pontos por cima
            |> gg::labs("Vendas Mensais", "Mes", "Vendas")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_bar(plot, color, width)} --- Camada de Barras}
+\index{geom\_bar()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma camada de gráfico de barras à especificação. Cada observação
+do DataFrame será representada por uma barra vertical posicionada no valor $x$
+com altura correspondente ao valor $y$.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_bar(plot: Dict, color: String, width: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}  & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color} & \code{String} & Cor das barras. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{width} & \code{Float}  & Largura das barras centradas no valor $x$. Valores recomendados: 0.4--1.0. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} da especificação com a camada de barras adicionada ao
+campo \code{"layers"}.
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Gráfico de barras categórico}]
+let plot = gg::hayplot(df, {"x": "categoria", "y": "vendas"})
+           |> gg::geom_bar("blue", 0.6)
+           |> gg::labs("Vendas por Categoria", "Categoria", "Vendas")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_histogram(plot, color, bins)} --- Camada de Histograma}
+\index{geom\_histogram()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma camada de histograma à especificação. Calcula automaticamente
+a distribuição de frequência dos valores da coluna $y$ e divide em um número
+especificado de \textit{bins} (intervalos).
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_histogram(plot: Dict, color: String, bins: Int) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}  & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color} & \code{String} & Cor das barras do histograma. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{bins}  & \code{Int}    & Número de intervalos (\textit{bins}) para dividir os dados. Valores recomendados: 5--30. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} da especificação com a camada de histograma adicionada ao
+campo \code{"layers"}.
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Histograma de distribuição}]
+let plot = gg::hayplot(df, {"x": "dummy", "y": "notas"})
+           |> gg::geom_histogram("green", 15)
+           |> gg::labs("Distribuição de Notas", "Nota", "Frequência")
+\end{lstlisting}
+
+\begin{tipbox}[title={\textbf{Dica:} Dummy $x$ para histogramas}]
+  Para histogramas univariados, use uma coluna $x$ constante (e.g., \code{"dummy": [1.0, 1.0, ...]})
+  pois o histograma calcula a distribuição apenas a partir dos valores $y$.
+\end{tipbox}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_boxplot(plot, color, width)} --- Camada de Boxplot}
+\index{geom\_boxplot()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma camada de boxplot (\textit{box-and-whisker plot}) à especificação.
+Exibe estatísticas resumidas: quartis (Q1, Q3), mediana, e \textit{whiskers}
+(1.5$\times$IQR). Ideal para visualizar distribuição e identificar outliers.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_boxplot(plot: Dict, color: String, width: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}  & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color} & \code{String} & Cor do box e whiskers. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{width} & \code{Float}  & Largura da caixa. Valores recomendados: 0.3--0.7. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} da especificação com a camada de boxplot adicionada ao
+campo \code{"layers"}.
+
+\subsection*{Estatísticas Calculadas}
+
+\begin{itemize}
+  \item \textbf{Q1}: 25º percentil (limite inferior da caixa)
+  \item \textbf{Mediana}: 50º percentil (linha preta na caixa)
+  \item \textbf{Q3}: 75º percentil (limite superior da caixa)
+  \item \textbf{IQR}: Q3 $-$ Q1 (intervalo interquartil)
+  \item \textbf{Whiskers}: Q1 $-$ 1.5$\times$IQR e Q3 $+$ 1.5$\times$IQR (limites dos whiskers)
+\end{itemize}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Boxplot de distribuição salarial}]
+let plot = gg::hayplot(df, {"x": "departamento", "y": "salario"})
+           |> gg::geom_boxplot("red", 0.4)
+           |> gg::labs("Distribuição Salarial", "Departamento", "Salário (USD)")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_heatmap(plot, color, cell\_size)} --- Camada de Heatmap}
+\index{geom\_heatmap()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma camada de heatmap (\textit{mapa de calor}) à especificação.
+Cada par $(x, y)$ é renderizado como uma célula retangular cuja intensidade de cor
+é proporcional ao valor $y$ normalizado. Ideal para visualizar dados em grade 2D.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_heatmap(plot: Dict, color: String, cell_size: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}      & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color}     & \code{String} & Cor base para o heatmap. A intensidade é calculada misturando com branco. \\[4pt]
+  \code{cell\_size} & \code{Float}  & Tamanho das células do heatmap. Valores recomendados: 0.5--1.5. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} da especificação com a camada de heatmap adicionada ao
+campo \code{"layers"}.
+
+\subsection*{Normalização de Cores}
+
+Os valores $y$ são normalizados para o intervalo $[0, 1]$ usando a fórmula:
+
+\[
+\text{intensidade} = \frac{y - y_{\min}}{y_{\max} - y_{\min}}
+\]
+
+A cor final é calculada misturando a cor base com branco proporcionalmente à
+intensidade (maior intensidade = cor mais saturada).
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Heatmap de temperatura em grade}]
+let plot = gg::hayplot(df, {"x": "coord_x", "y": "coord_y"})
+           |> gg::geom_heatmap("red", 0.8)
+           |> gg::labs("Temperatura", "Coordenada X", "Coordenada Y")
 \end{lstlisting}
 
 % ────────────────────────────────────────────────────────────
@@ -741,6 +927,99 @@ write(svg_content, "sales_growth.svg")
 print("Plot saved to 'sales_growth.svg'!")
 \end{lstlisting}
 
+\section{Gráfico de Barras}
+\index{exemplo!barras}
+
+Visualização de dados categóricos ou agregados por grupos:
+
+\begin{lstlisting}[caption={examples/bar\_chart.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados de vendas por categoria
+let data = {"category": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "sales": [150.0, 230.0, 180.0, 320.0, 290.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "category", "y": "sales"})
+    |> gg::geom_bar("blue", 0.6)
+    |> gg::labs("Sales by Category", "Category", "Sales (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "bar_chart.svg")
+print("Plot saved to 'bar_chart.svg'!")
+\end{lstlisting}
+
+\section{Histograma}
+\index{exemplo!histograma}
+
+Análise de distribuição de uma variável univariada:
+
+\begin{lstlisting}[caption={examples/histogram.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados de notas de teste
+let data = {"dummy": [1.0, 1.0, 1.0, 1.0, 1.0],
+            "scores": [65.0, 72.0, 78.0, 85.0, 88.0, 90.0, 92.0, 95.0,
+                       78.0, 82.0, 75.0, 88.0, 91.0, 84.0, 79.0, 86.0,
+                       93.0, 77.0, 83.0, 89.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "dummy", "y": "scores"})
+    |> gg::geom_histogram("green", 15)
+    |> gg::labs("Distribution of Test Scores", "Score", "Frequency")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "histogram.svg")
+print("Plot saved to 'histogram.svg'!")
+\end{lstlisting}
+
+\section{Boxplot}
+\index{exemplo!boxplot}
+
+Visualização de distribuição e identificação de outliers:
+
+\begin{lstlisting}[caption={examples/boxplot.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados salariais por departamento
+let data = {"department": [1.0, 1.0, 1.0, 1.0, 1.0],
+            "salary": [45000.0, 52000.0, 48000.0, 61000.0, 55000.0,
+                       58000.0, 49000.0, 63000.0, 51000.0, 57000.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "department", "y": "salary"})
+    |> gg::geom_boxplot("red", 0.4)
+    |> gg::labs("Salary Distribution", "Department", "Salary (USD)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "boxplot.svg")
+print("Plot saved to 'boxplot.svg'!")
+\end{lstlisting}
+
+\section{Heatmap}
+\index{exemplo!heatmap}
+
+Visualização de dados em grade 2D com intensidade de cor:
+
+\begin{lstlisting}[caption={examples/heatmap.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados de temperatura em grade 3x3
+let data = {"x": [1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0],
+            "y": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0],
+            "temperature": [20.0, 25.0, 30.0, 22.0, 28.0, 35.0,
+                            18.0, 24.0, 32.0]}
+let df = dataframe(data)
+
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_heatmap("red", 0.8)
+    |> gg::labs("Temperature Heatmap", "X Location", "Y Location")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "heatmap.svg")
+print("Plot saved to 'heatmap.svg'!")
+\end{lstlisting}
+
 % ============================================================
 \chapter{Arquitetura Técnica}
 % ============================================================
@@ -887,14 +1166,16 @@ no loop de layers.
     \midrule
     v0.1.x & \code{geom\_point} --- dispers\~{a}o                                  & $\checkmark$ Conclu\'{i}do \\
     v0.1.x & \code{geom\_line} --- s\'{e}ries temporais e tend\^{e}ncia               & $\checkmark$ Conclu\'{i}do \\
-    v0.2.0 & \code{geom\_bar} --- barras verticais                              & Planejado \\
-    v0.2.0 & \code{geom\_histogram} --- histograma                              & Planejado \\
-    v0.3.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & Planejado \\
-    v0.3.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & Planejado \\
-    v0.3.0 & \code{facet\_wrap} --- painéis por grupo                           & Planejado \\
-    v0.4.0 & Saída PNG (via feature \code{png\_backend})                        & Futuro \\
-    v0.4.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
-    v0.5.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
+    v0.3.0 & \code{geom\_bar} --- barras verticais                              & $\checkmark$ Conclu\'{i}do \\
+    v0.3.0 & \code{geom\_histogram} --- histograma                              & $\checkmark$ Conclu\'{i}do \\
+    v0.3.0 & \code{geom\_boxplot} --- box-and-whisker                           & $\checkmark$ Conclu\'{i}do \\
+    v0.3.0 & \code{geom\_heatmap} --- mapa de calor 2D                           & $\checkmark$ Conclu\'{i}do \\
+    v0.4.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & Planejado \\
+    v0.4.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & Planejado \\
+    v0.4.0 & \code{facet\_wrap} --- painéis por grupo                           & Planejado \\
+    v0.5.0 & Saída PNG (via feature \code{png\_backend})                        & Futuro \\
+    v0.5.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
+    v0.6.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
     \bottomrule
   \end{tabularx}
 \end{center}
@@ -912,6 +1193,10 @@ no loop de layers.
     \code{hayplot(df, aes)}                        & \code{DataFrame, Dict}              & Inicializa a spec com dados e mapeamento $x/y$ \\[3pt]
     \code{geom\_point(plot, color, size)}          & \code{Dict, String, Float}          & Adiciona camada de dispersão (círculos) \\[3pt]
     \code{geom\_line(plot, color, size)}           & \code{Dict, String, Float}          & Adiciona camada de linha conectando pontos \\[3pt]
+    \code{geom\_bar(plot, color, width)}           & \code{Dict, String, Float}          & Adiciona camada de barras verticais \\[3pt]
+    \code{geom\_histogram(plot, color, bins)}     & \code{Dict, String, Int}            & Adiciona camada de histograma (distribuição) \\[3pt]
+    \code{geom\_boxplot(plot, color, width)}       & \code{Dict, String, Float}          & Adiciona camada de boxplot (quartis, mediana) \\[3pt]
+    \code{geom\_heatmap(plot, color, cell\_size)}  & \code{Dict, String, Float}          & Adiciona camada de heatmap (intensidade de cor) \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule
@@ -920,7 +1205,7 @@ no loop de layers.
 
 \bigskip
 
-\noindent\textbf{Cores disponíveis em \code{geom\_point()} e \code{geom\_line()}:}
+\noindent\textbf{Cores disponíveis em todas as geometrias:}
 
 \begin{center}
   \begin{tabular}{@{}llll@{}}

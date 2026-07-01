@@ -1,1 +1,17 @@
 /target
+
+# LaTeX temporary files
+*.aux
+*.log
+*.out
+*.toc
+*.idx
+*.ilg
+*.ind
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.bcf
+*.run.xml
