@@ -1,0 +1,3 @@
+let data = {"x": [1.0, 2.0], "y": [3.0, 4.0]}
+let df = dataframe(data)
+print(df)

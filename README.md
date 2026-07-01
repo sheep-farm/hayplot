@@ -13,7 +13,7 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 
 - `hayplot(df: DataFrame, aes: Dict) -> Dict`: Initializes the plot specification with a DataFrame and aesthetic mapping. 
   - **Single series**: `aes={"x": "col_x", "y": "col_y"}`
-  - **Multiple series**: `aes={"x": ["col_x1", "col_x2", ...], "y": "col_y"}` - plots multiple x series with different colors
+  - **Multiple series**: `aes={"x": "col_x1,col_x2,...", "y": "col_y"}` - plots multiple x series with different colors (comma-separated)
   - **Auto colors**: Use `geom_point("auto", ...)` or `geom_line("auto", ...)` for automatic color palette
 - `geom_point(plot: Dict, color: String, size: Float) -> Dict`: Appends a scatter plot layer to the specification.
 - `geom_line(plot: Dict, color: String, size: Float) -> Dict`: Appends a line series layer to the specification. Can be combined with `geom_point` to produce line+dot charts.
@@ -70,7 +70,7 @@ import("sheep-farm/hayplot", as=gg)
 let df = load("data.dta")
 
 // Multiple series with auto colors
-let plot = gg::hayplot(df, {"x": ["y_control", "y_treated"], "y": "period"})
+let plot = gg::hayplot(df, {"x": "y_control,y_treated", "y": "period"})
     |> gg::geom_line("auto", 2.0)
     |> gg::geom_point("auto", 3.0)
     |> gg::labs("DiD: Treatment vs Control", "Outcome", "Period")
@@ -81,7 +81,7 @@ write(svg_content, "did_plot.svg")
 
 The x-axis can be:
 - Single column: `{"x": "col_x", "y": "col_y"}`
-- Multiple columns: `{"x": ["col1", "col2", ...], "y": "col_y"}`
+- Multiple columns: `{"x": "col1,col2,...", "y": "col_y"}` (comma-separated)
 
 Use `color="auto"` in `geom_point` or `geom_line` for automatic color palette (8 colors). Specify a named color like `"blue"` to use the same color for all series.
 

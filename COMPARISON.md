@@ -7,7 +7,7 @@ Atualizado: v1.3.0 (jul 2026)
 ## ✅ Implementado (Core + Básico + Crítico)
 
 ### Core Functions (100%)
-- `ggplot()` → `hayplot()` ✓ - aceita múltiplas séries x: `{"x": ["col1", "col2"], "y": "col_y"}` - NOVO v1.3.0
+- `ggplot()` → `hayplot()` ✓ - aceita múltiplas séries x: `{"x": "col1,col2", "y": "col_y"}` (separado por vírgulas) - NOVO v1.3.0
 - `aes()` → via dict ✓
 - `labs()` → `labs()` ✓
 - `ggsave()` → `save_svg()`, `save_png()` ✓
@@ -68,13 +68,13 @@ Suporte generalista para múltiplas séries no eixo x, habilitando visualizaçõ
 
 ```text
 // DiD: tratamento vs controle ao longo do tempo
-let plot = gg :: hayplot(df, {"x": ["y_control", "y_treated"], "y": "period"})
+let plot = gg :: hayplot(df, {"x": "y_control,y_treated", "y": "period"})
     |> gg :: geom_line("auto", 2.0)
     |> gg :: geom_point("auto", 3.0)
 ```
 
 **Implementação:**
-- `aes` aceita lista de colunas x: `{"x": ["col1", "col2", ...], "y": "col_y"}`
+- `aes` aceita string separada por vírgulas: `{"x": "col1,col2,...", "y": "col_y"}`
 - `geom_point("auto", ...)` e `geom_line("auto", ...)` usam paleta automática
 - Paleta de 8 cores: steel blue, crimson, forest green, dark orange, purple, deep sky blue, hot pink, lime green
 - Geometries point/line: suporte completo a múltiplas séries
@@ -83,7 +83,7 @@ let plot = gg :: hayplot(df, {"x": ["y_control", "y_treated"], "y": "period"})
 
 **Diferença vs ggplot2:**
 - ggplot2 usa `aes(color=group)` com formato long
-- hayplot usa `aes(x=[col1, col2])` com formato wide
+- hayplot usa `aes(x="col1,col2")` com formato wide (separado por vírgulas)
 - Ambos produzem visualização idêntica (múltiplas séries coloridas)
 
 ## ❌ Falta para 80%+ Aderência
