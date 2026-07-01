@@ -137,7 +137,7 @@
 \newcommand{\hayplot}{\textbf{hayplot}}
 
 % ── Metadados da versão ─────────────────────────────────────────────────────
-\newcommand{\hayversiontag}{v0.8.0}
+\newcommand{\hayversiontag}{v0.9.0}
 \newcommand{\hayashiversiontag}{0.2.6}
 
 % ============================================================
@@ -922,6 +922,111 @@ let svg1 = gg::render_svg(plot1)
 \end{tipbox}
 
 % ─────────────────────────────────────────────────────────---
+\section{\texttt{set\_dimensions(plot, width, height)} --- Dimensões do SVG}
+\index{set\_dimensions()}
+% ─────────────────────────────────────────────────────────---
+
+Define as dimensões de saída do SVG em pixels. O padrão é 800x600.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+set_dimensions(plot: Dict, width: Int, height: Int) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}    & \code{Dict}   & A especificação de plot. \\[4pt]
+  \code{width}   & \code{Int}    & Largura do SVG em pixels (padrão: 800). \\[4pt]
+  \code{height}  & \code{Int}    & Altura do SVG em pixels (padrão: 600). \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Dimensões customizadas}]
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+           |> gg::set_dimensions(1200, 800)
+           |> gg::geom_point("blue", 5.0)
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────---
+\section{\texttt{set\_margins(plot, top, bottom, left, right)} --- Margens do Plot}
+\index{set\_margins()}
+% ─────────────────────────────────────────────────────────---
+
+Define as margens do plot em pixels. O padrão é 20px em todos os lados.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+set_margins(plot: Dict, top: Int, bottom: Int, left: Int, right: Int) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}    & \code{Dict}   & A especificação de plot. \\[4pt]
+  \code{top}     & \code{Int}    & Margem superior em pixels (padrão: 20). \\[4pt]
+  \code{bottom}  & \code{Int}    & Margem inferior em pixels (padrão: 20). \\[4pt]
+  \code{left}    & \code{Int}    & Margem esquerda em pixels (padrão: 20). \\[4pt]
+  \code{right}   & \code{Int}    & Margem direita em pixels (padrão: 20). \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Margens customizadas}]
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+           |> gg::set_margins(40, 40, 60, 40)
+           |> gg::geom_point("blue", 5.0)
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────---
+\section{\texttt{save\_svg(plot, filename)} --- Salvar SVG}
+\index{save\_svg()}
+% ─────────────────────────────────────────────────────────---
+
+Renderiza o plot e salva diretamente em um arquivo. Função de conveniência que combina \code{render\_svg()} + \code{write()}.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+save_svg(plot: Dict, filename: String) -> Result<String, String>
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}     & \code{Dict}   & A especificação de plot. \\[4pt]
+  \code{filename} & \code{String} & Nome do arquivo para salvar o SVG. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O conteúdo SVG como uma string, caso seja necessário para processamento adicional.
+
+\subsection*{Exemplo}
+
+\begin{lstlisting}[caption={Salvamento em um passo}]
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+           |> gg::geom_point("blue", 5.0)
+           |> gg::geom_line("red", 2.0)
+let svg = gg::save_svg(plot, "output.svg")
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────---
 
 % ────────────────────────────────────────────────────────────
 \section{\texttt{labs(plot, title, x, y)} --- Rótulos}
@@ -1632,9 +1737,12 @@ no loop de layers.
     v0.6.0 & \code{scale\_x\_log10}, \code{scale\_y\_log10} --- eixos em log    & $\checkmark$ Conclu\'{i}do \\
     v0.8.0 & \code{filter\_data} --- filtragem de DataFrames                    & $\checkmark$ Conclu\'{i}do \\
     v0.8.0 & \code{facet\_wrap}, \code{render\_facets} --- descontinuados        & $\checkmark$ Substituídos por \code{filter\_data} \\
-    v0.8.0 & Saída PNG (via feature \code{png\_backend})                        & Planejado \\
-    v0.8.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
-    v0.8.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
+    v0.9.0 & \code{set\_dimensions} --- tamanho customizável de SVG             & $\checkmark$ Conclu\'{i}do \\
+    v0.9.0 & \code{set\_margins} --- margens customizáveis                        & $\checkmark$ Conclu\'{i}do \\
+    v0.9.0 & \code{save\_svg} --- render + save em um passo                      & $\checkmark$ Conclu\'{i}do \\
+    v0.9.0 & Saída PNG (via feature \code{png\_backend})                        & Planejado \\
+    v0.9.0 & \code{geom\_ribbon} --- bandas de intervalo de confiança           & Futuro \\
+    v0.9.0 & \code{geom\_smooth} --- regressão LOESS/linear                    & Futuro \\
     v0.9.0 & \code{theme\_*} --- temas de estilo (dark, minimal, classic)       & Futuro \\
     \bottomrule
   \end{tabularx}
@@ -1665,6 +1773,9 @@ no loop de layers.
     \code{scale\_x\_log10(plot)}                   & \code{Dict}                         & Define eixo X para escala logarítmica base 10 \\[3pt]
     \code{scale\_y\_log10(plot)}                   & \code{Dict}                         & Define eixo Y para escala logarítmica base 10 \\[3pt]
     \code{filter\_data(df, col, value)}           & \code{DataFrame, String, Float}     & Filtra DataFrame onde col == value \\[3pt]
+    \code{set\_dimensions(plot, w, h)}             & \code{Dict, Int, Int}               & Define dimensões do SVG (padrão: 800x600) \\[3pt]
+    \code{set\_margins(plot, t, b, l, r)}          & \code{Dict, Int, Int, Int, Int}     & Define margens do plot (padrão: 20px) \\[3pt]
+    \code{save\_svg(plot, filename)}               & \code{Dict, String}                 & Renderiza e salva SVG em um passo \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule

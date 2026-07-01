@@ -26,6 +26,9 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `scale_x_log10(plot: Dict) -> Dict`: Sets the x-axis to logarithmic scale (base 10).
 - `scale_y_log10(plot: Dict) -> Dict`: Sets the y-axis to logarithmic scale (base 10).
 - `filter_data(df: DataFrame, col: String, value: Float) -> Result<DataFrame, String>`: Filters a DataFrame to rows where `col` equals `value`. Use for manual faceting.
+- `set_dimensions(plot: Dict, width: Int, height: Int) -> Dict`: Sets SVG output dimensions in pixels. Default is 800x600.
+- `set_margins(plot: Dict, top: Int, bottom: Int, left: Int, right: Int) -> Dict`: Sets plot margins in pixels. Default is 20px on all sides.
+- `save_svg(plot: Dict, filename: String) -> Result<String, String>`: Renders and saves the plot to a file in one step. Returns SVG content.
 - `facet_wrap(plot: Dict, group_col: String) -> Dict`: [DEPRECATED] Kept for compatibility. Use `filter_data()` instead.
 - `render_facets(plot: Dict) -> Result<List<String>, String>`: [DEPRECATED] Kept for compatibility. Use `filter_data()` + manual calls instead.
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
@@ -239,6 +242,39 @@ let plot2 = gg::hayplot(df2, {"x": "x", "y": "y"})
     |> gg::labs("Group 2", "X", "Y")
 let svg2 = gg::render_svg(plot2)
 write(svg2, "facet_group_2.svg")
+```
+
+**Custom dimensions and margins:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [10.0, 20.0, 15.0, 25.0, 30.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_dimensions(1200, 800)
+    |> gg::set_margins(40, 40, 60, 40)
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("red", 2.0)
+    |> gg::labs("Custom Size", "X", "Y")
+let svg = gg::render_svg(plot)
+write(svg, "custom_size.svg")
+```
+
+**One-step save with save_svg:**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [10.0, 20.0, 15.0, 25.0, 30.0]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("red", 2.0)
+    |> gg::labs("Quick Save", "X", "Y")
+let svg = gg::save_svg(plot, "output.svg")
 ```
 
 ## License

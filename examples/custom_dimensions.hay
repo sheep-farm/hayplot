@@ -1,0 +1,37 @@
+// Custom Dimensions Example
+// Run this from the root of the hayplot repository:
+// hay examples/custom_dimensions.hay
+
+import("sheep-farm/hayplot", as=gg)
+
+// Create a simple dataset
+let data = {"x": [1.0, 2.0, 3.0, 4.0, 5.0], "y": [10.0, 20.0, 15.0, 25.0, 30.0]}
+let df = dataframe(data)
+
+// Render with default dimensions (800x600)
+let plot_default = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_point("blue", 5.0)
+    |> gg::geom_line("red", 2.0)
+    |> gg::labs("Default Dimensions (800x600)", "X", "Y")
+let svg_default = gg::render_svg(plot_default)
+write(svg_default, "plot_default.svg")
+
+// Render with custom dimensions (1200x800)
+let plot_custom = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_dimensions(1200, 800)
+    |> gg::geom_point("green", 5.0)
+    |> gg::geom_line("orange", 2.0)
+    |> gg::labs("Custom Dimensions (1200x800)", "X", "Y")
+let svg_custom = gg::render_svg(plot_custom)
+write(svg_custom, "plot_custom.svg")
+
+// Render with small dimensions (400x300)
+let plot_small = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::set_dimensions(400, 300)
+    |> gg::geom_point("purple", 5.0)
+    |> gg::geom_line("magenta", 2.0)
+    |> gg::labs("Small Dimensions (400x300)", "X", "Y")
+let svg_small = gg::render_svg(plot_small)
+write(svg_small, "plot_small.svg")
+
+print("All plots with custom dimensions saved successfully!")

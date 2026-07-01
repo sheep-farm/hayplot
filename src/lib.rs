@@ -323,34 +323,58 @@ pub fn filter_data(
     Ok(filtered_array_ref.into_hayashi())
 }
 
-/// Helper function to filter an Arrow array by a boolean mask
-fn filter_array_by_mask(array: &dyn Array, mask: &[bool]) -> Result<ArrayRef, String> {
-    let data_type = array.data_type();
-    
-    if let Some(float_array) = array.as_any().downcast_ref::<Float64Array>() {
-        let values = float_array.values();
-        let filtered: Vec<f64> = values
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| mask[*i])
-            .map(|(_, &v)| v)
-            .collect();
-        Ok(Arc::new(Float64Array::from(filtered)) as ArrayRef)
-    } else if let Some(int_array) = array.as_any().downcast_ref::<Int64Array>() {
-        let values = int_array.values();
-        let filtered: Vec<i64> = values
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| mask[*i])
-            .map(|(_, &v)| v)
-            .collect();
-        Ok(Arc::new(Int64Array::from(filtered)) as ArrayRef)
-    } else {
-        Err(format!("Unsupported array type for filtering: {:?}", data_type))
+/// 16. set_dimensions(plot, width, height)
+/// Sets the SVG output dimensions in pixels. Default is 800x600.
+#[hayashi_fn]
+pub fn set_dimensions(
+    mut plot: HashMap<String, HayashiValue>,
+    width: i64,
+    height: i64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("width".to_string(), HayashiValue::Int(width));
+        spec.insert("height".to_string(), HayashiValue::Int(height));
     }
+    plot
 }
 
-/// 16. facet_wrap(plot, group_col)
+/// 17. set_margins(plot, top, bottom, left, right)
+/// Sets the plot margins in pixels. Default is 20px on all sides.
+#[hayashi_fn]
+pub fn set_margins(
+    mut plot: HashMap<String, HayashiValue>,
+    top: i64,
+    bottom: i64,
+    left: i64,
+    right: i64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
+        spec.insert("margin_top".to_string(), HayashiValue::Int(top));
+        spec.insert("margin_bottom".to_string(), HayashiValue::Int(bottom));
+        spec.insert("margin_left".to_string(), HayashiValue::Int(left));
+        spec.insert("margin_right".to_string(), HayashiValue::Int(right));
+    }
+    plot
+}
+
+/// 18. save_svg(plot, filename)
+/// Renders the plot and saves it directly to a file. Returns the SVG content as a string.
+/// This is a convenience function that combines render_svg() + write().
+#[hayashi_fn]
+pub fn save_svg(
+    plot: HashMap<String, HayashiValue>,
+    filename: String
+) -> Result<HayashiValue, String> {
+    let svg_content = render_svg_impl(plot)?;
+    
+    // Write to file using std::fs
+    std::fs::write(&filename, &svg_content)
+        .map_err(|e| format!("Failed to write SVG to '{}': {}", filename, e))?;
+    
+    Ok(HayashiValue::Str(svg_content))
+}
+
+/// 19. facet_wrap(plot, group_col)
 /// DEPRECATED: Use filter_data() instead. This function is kept for compatibility but does nothing.
 #[hayashi_fn]
 pub fn facet_wrap(
@@ -360,7 +384,7 @@ pub fn facet_wrap(
     plot
 }
 
-/// 17. render_facets(plot)
+/// 20. render_facets(plot)
 /// DEPRECATED: Use filter_data() + manual hayplot calls instead. This function renders a single plot.
 #[hayashi_fn]
 pub fn render_facets(
@@ -397,6 +421,33 @@ fn extract_column_f64(struct_arr: &StructArray, name: &str) -> Result<Vec<f64>, 
     }
     
     Ok(values)
+}
+
+/// Helper function to filter an Arrow array by a boolean mask
+fn filter_array_by_mask(array: &dyn Array, mask: &[bool]) -> Result<ArrayRef, String> {
+    let data_type = array.data_type();
+    
+    if let Some(float_array) = array.as_any().downcast_ref::<Float64Array>() {
+        let values = float_array.values();
+        let filtered: Vec<f64> = values
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mask[*i])
+            .map(|(_, &v)| v)
+            .collect();
+        Ok(Arc::new(Float64Array::from(filtered)) as ArrayRef)
+    } else if let Some(int_array) = array.as_any().downcast_ref::<Int64Array>() {
+        let values = int_array.values();
+        let filtered: Vec<i64> = values
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mask[*i])
+            .map(|(_, &v)| v)
+            .collect();
+        Ok(Arc::new(Int64Array::from(filtered)) as ArrayRef)
+    } else {
+        Err(format!("Unsupported array type for filtering: {:?}", data_type))
+    }
 }
 
 /// Helper function to parse colors from string names or hex codes
@@ -533,15 +584,56 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.1 - 1.0 };
     let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.1 + 1.0 };
     
-    // 7. Render plot into an in-memory SVG string buffer
+    // 7. Get dimensions from spec or use defaults
+    let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        let w = spec.get("width").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(800);
+        let h = spec.get("height").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(600);
+        (w, h)
+    } else {
+        (800, 600)
+    };
+
+    // 8. Get margins from spec or use defaults
+    let (margin_top, margin_bottom, margin_left, margin_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        let mt = spec.get("margin_top").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        let mb = spec.get("margin_bottom").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        let ml = spec.get("margin_left").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        let mr = spec.get("margin_right").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as u32),
+            _ => None,
+        }).unwrap_or(20);
+        (mt, mb, ml, mr)
+    } else {
+        (20, 20, 20, 20)
+    };
+
+    // 9. Render plot into an in-memory SVG string buffer
     let mut svg_buffer = String::new();
     {
-        let root = SVGBackend::with_string(&mut svg_buffer, (800, 600)).into_drawing_area();
+        let root = SVGBackend::with_string(&mut svg_buffer, (width, height)).into_drawing_area();
         root.fill(&WHITE).map_err(|e| e.to_string())?;
         
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
-            .margin(20)
+            .margin_top(margin_top)
+            .margin_bottom(margin_bottom)
+            .margin_left(margin_left)
+            .margin_right(margin_right)
             .x_label_area_size(40)
             .y_label_area_size(40)
             .build_cartesian_2d(x_min..x_max, y_min..y_max)
