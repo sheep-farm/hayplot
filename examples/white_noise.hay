@@ -1,0 +1,23 @@
+import("sheep-farm/hayplot" as= gg)
+
+// White noise demonstration
+// White noise: random values with zero mean, constant variance, no autocorrelation
+// Used in time series analysis and signal processing
+
+// Generate white noise data (simulated random values)
+let data = {
+    "time": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0],
+    "noise": [0.23, -0.45, 0.67, -0.12, 0.89, -0.34, 0.56, -0.78, 0.41, -0.67, 0.23, -0.45, 0.89, -0.12, 0.34, -0.56, 0.78, -0.41, 0.67, -0.23]
+}
+
+let df = dataframe(data)
+
+// Plot white noise as points and line
+let plot = gg :: hayplot (df , {"x": "time", "y": "noise"})
+    |> gg :: geom_line ("gray", 1.0)
+    |> gg :: geom_point ("blue", 2.0)
+    |> gg :: geom_hline ("red", 1.0, 0.0)  // zero mean reference
+    |> gg :: labs ("White Noise Process", "Time", "Noise Value")
+
+let svg = gg :: render_svg (plot)
+write (svg , "white_noise.svg")
