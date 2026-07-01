@@ -1,7 +1,7 @@
 import("sheep-farm/hayplot" as= gg)
 
-// Demonstração de múltiplas séries com configuração personalizada (NOVO v1.3.0)
-// Este exemplo mostra como configurar cada série individualmente
+// Demonstração de múltiplas séries com configuração personalizada e legenda (NOVO v1.4.0)
+// Este exemplo mostra como configurar cada série individualmente e exibir legenda
 
 // Criar dados simples com duas colunas x e uma coluna y
 let data = {
@@ -12,21 +12,13 @@ let data = {
 
 let df = dataframe(data)
 
-// Plot 1: cores automáticas (padrão)
-let plot1 = gg :: hayplot (df , {"x": "x1,x2", "y": "y"})
-    |> gg :: geom_line ("auto", 2.0)
-    |> gg :: geom_point ("auto", 3.0)
-    |> gg :: labs ("Auto Colors", "X Values", "Y")
-
-let svg1 = gg :: render_svg (plot1)
-write (svg1 , "series_auto.svg")
-
-// Plot 2: cores customizadas por série
-let plot2 = gg :: hayplot (df , {"x": "x1,x2", "y": "y"})
+// Plot com múltiplas séries x, cores customizadas e legenda
+let plot = gg :: hayplot (df , {"x": "x1,x2", "y": "y"})
     |> gg :: set_series_config ({"x1": {"color": "blue", "size": 2.0}, "x2": {"color": "red", "size": 4.0}})
     |> gg :: geom_line ("auto", 2.0)
     |> gg :: geom_point ("auto", 3.0)
-    |> gg :: labs ("Custom Series Config", "X Values", "Y")
+    |> gg :: show_legend ()
+    |> gg :: labs ("Custom Series Config with Legend", "X Values", "Y")
 
-let svg2 = gg :: render_svg (plot2)
-write (svg2 , "series_custom.svg")
+let svg = gg :: render_svg (plot)
+write (svg , "series_legend.svg")

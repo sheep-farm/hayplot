@@ -14,7 +14,7 @@ let df = dataframe(data)
 // Smooth spline with conservative tension (0.2)
 // tension: 0.0 = linear, 1.0 = very smooth
 let plot = gg :: hayplot (df , {"x": "x", "y": "y"})
-    |> gg :: geom_spline ("blue", 2.0, 0.2)
+    |> gg :: geom_spline ("blue", 2.0, 0.8)
     |> gg :: geom_point ("blue", 3.0)
     |> gg :: labs ("Smooth Spline Interpolation", "X", "Y")
 
