@@ -26,7 +26,7 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_vline(plot: Dict, color: String, size: Float, xintercept: Float) -> Dict`: Appends a vertical reference line at xintercept.
 - `geom_abline(plot: Dict, color: String, size: Float, slope: Float, intercept: Float) -> Dict`: Appends a diagonal reference line (y = slope * x + intercept).
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
-- `geom_spline(plot, Dict, color: String, size: Float, tension: Float) -> Dict`: Appends a smooth spline curve (Catmull-Rom interpolation). tension: 0.0 (linear) to 1.0 (very smooth), defaults to 0.5.
+- `geom_spline(plot, Dict, color: String, size: Float, tension: Float) -> Dict`: Appends a smooth spline curve (Catmull-Rom interpolation). tension: 0.0 (linear) to 1.0 (very smooth), defaults to 0.2 (conservative).
 - `geom_smooth(plot: Dict, color: String, size: Float, method: String, se: Bool) -> Dict`: Appends a smoothed conditional mean (linear regression or LOESS). method: "lm" for linear regression. se: whether to show standard error bands.
 - `geom_text(plot: Dict, label: String, x: Float, y: Float, color: String, size: Float) -> Dict`: Adds text annotations at specified coordinates.
 - `draw_element(plot, Dict, element_type: String, params: Dict) -> Dict`: Draws arbitrary geometric elements for annotations. element_type: "circle", "rect", "line_segment", "arrow". params: element-specific dict (x, y, size, width, height, x1, y1, x2, y2, arrow_size, color).
@@ -290,7 +290,7 @@ let d = {"x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0], "y": [10.0, 25.0, 15.0, 35.0,
 let df = dataframe(d)
 
 let plot = gg::hayplot(df, {"x": "x", "y": "y"})
-    |> gg::geom_spline("blue", 2.0, 0.5)  // Catmull-Rom spline with moderate tension
+    |> gg::geom_spline("blue", 2.0, 0.2)  // Catmull-Rom spline with conservative tension
     |> gg::geom_point("blue", 3.0)
     |> gg::labs("Smooth Spline Interpolation", "X", "Y")
 
