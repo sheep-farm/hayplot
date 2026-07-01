@@ -1,4 +1,4 @@
-This is LuaHBTeX, Version 1.24.0 (TeX Live 2026/Arch Linux)  (format=lualatex 2026.6.18)  30 JUN 2026 18:50
+This is LuaHBTeX, Version 1.24.0 (TeX Live 2026/Arch Linux)  (format=lualatex 2026.6.18)  1 JUL 2026 00:32
  restricted system commands enabled.
 **manual.tex
 (./manual.tex
@@ -819,107 +819,118 @@ Package: makeidx 2021/10/04 v1.0m Standard LaTeX package
 \openout4 = manual.idx
 
 Writing index file manual.idx
-(./manual.aux
+(/usr/share/texmf-dist/tex/latex/amsfonts/amssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+
+(/usr/share/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\@emptytoks=\toks42
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+)) (./manual.aux
 Package babel Info: 'brazilian' activates 'portuges' shorthands.
 (babel)             Reported on input line 8.
 )
 \openout1 = manual.aux
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 145.
-LaTeX Font Info:    ... okay on input line 145.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 146.
+LaTeX Font Info:    ... okay on input line 146.
 
 Package fontspec Info: 
 (fontspec)             Adjusting the maths setup (use [no-math] to avoid
 (fontspec)             this).
 
-\symlegacymaths=\mathgroup4
+\symlegacymaths=\mathgroup6
 LaTeX Font Info:    Overwriting symbol font `legacymaths' in version `bold'
-(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 145.
-LaTeX Font Info:    Redeclaring math accent \acute on input line 145.
-LaTeX Font Info:    Redeclaring math accent \grave on input line 145.
-LaTeX Font Info:    Redeclaring math accent \ddot on input line 145.
-LaTeX Font Info:    Redeclaring math accent \tilde on input line 145.
-LaTeX Font Info:    Redeclaring math accent \bar on input line 145.
-LaTeX Font Info:    Redeclaring math accent \breve on input line 145.
-LaTeX Font Info:    Redeclaring math accent \check on input line 145.
-LaTeX Font Info:    Redeclaring math accent \hat on input line 145.
-LaTeX Font Info:    Redeclaring math accent \dot on input line 145.
-LaTeX Font Info:    Redeclaring math accent \mathring on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \colon on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Delta on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Theta on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Xi on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Pi on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Phi on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Psi on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \Omega on input line 145.
-LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 145.
-LaTeX Font Info:    Redeclaring symbol font `operators' on input line 145.
+(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 146.
+LaTeX Font Info:    Redeclaring math accent \acute on input line 146.
+LaTeX Font Info:    Redeclaring math accent \grave on input line 146.
+LaTeX Font Info:    Redeclaring math accent \ddot on input line 146.
+LaTeX Font Info:    Redeclaring math accent \tilde on input line 146.
+LaTeX Font Info:    Redeclaring math accent \bar on input line 146.
+LaTeX Font Info:    Redeclaring math accent \breve on input line 146.
+LaTeX Font Info:    Redeclaring math accent \check on input line 146.
+LaTeX Font Info:    Redeclaring math accent \hat on input line 146.
+LaTeX Font Info:    Redeclaring math accent \dot on input line 146.
+LaTeX Font Info:    Redeclaring math accent \mathring on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \colon on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Delta on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Theta on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Xi on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Pi on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Phi on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Psi on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \Omega on input line 146.
+LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 146.
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 146.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `normal' on input line 145.
+(Font)              `operators' in the math version `normal' on input line 146.
 
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  OT1/cmr/m/n --> TU/LatinModernRoman(0)/m/n on input lin
-e 145.
+e 146.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `bold' on input line 145.
+(Font)              `operators' in the math version `bold' on input line 146.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  OT1/cmr/bx/n --> TU/LatinModernRoman(0)/m/n on input li
-ne 145.
+ne 146.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  TU/LatinModernRoman(0)/m/n --> TU/LatinModernRoman(0)/m
-/n on input line 145.
+/n on input line 146.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
 (Font)                  OT1/cmr/m/it --> TU/LatinModernRoman(0)/m/it on input l
-ine 145.
+ine 146.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
 (Font)                  OT1/cmr/bx/n --> TU/LatinModernRoman(0)/b/n on input li
-ne 145.
+ne 146.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 145.
+(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 146.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
 (Font)                  OT1/cmtt/m/n --> TU/LatinModernMono(0)/m/n on input lin
-e 145.
+e 146.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
 (Font)                  TU/LatinModernRoman(0)/m/n --> TU/LatinModernRoman(0)/b
-/n on input line 145.
+/n on input line 146.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> TU/LatinModernRoman(0)/b/it on input 
-line 145.
+line 146.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 145.
+(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 146.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 (Font)                  OT1/cmtt/m/n --> TU/LatinModernMono(0)/b/n on input lin
-e 145.
-LaTeX Info: Redefining \microtypecontext on input line 145.
-Package microtype Info: Applying patch `item' on input line 145.
-Package microtype Info: Applying patch `toc' on input line 145.
-Package microtype Info: Applying patch `eqnum' on input line 145.
-Package microtype Info: Applying patch `footnote' on input line 145.
-Package microtype Info: Applying patch `verbatim' on input line 145.
-LaTeX Info: Redefining \microtypesetup on input line 145.
+e 146.
+LaTeX Info: Redefining \microtypecontext on input line 146.
+Package microtype Info: Applying patch `item' on input line 146.
+Package microtype Info: Applying patch `toc' on input line 146.
+Package microtype Info: Applying patch `eqnum' on input line 146.
+Package microtype Info: Applying patch `footnote' on input line 146.
+Package microtype Info: Applying patch `verbatim' on input line 146.
+LaTeX Info: Redefining \microtypesetup on input line 146.
 Package microtype Info: Generating PDF output.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
@@ -976,12 +987,12 @@ ern Roman (RS)
 \scratchbox=\box82
 \nofMPsegments=\count351
 \nofMParguments=\count352
-\everyMPshowfont=\toks42
+\everyMPshowfont=\toks43
 \MPscratchCnt=\count353
 \MPscratchDim=\dimen299
 \MPnumerator=\count354
 \makeMPintoPDFobject=\count355
-\everyMPtoPDFconversion=\toks43
+\everyMPtoPDFconversion=\toks44
 ) (/usr/share/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
@@ -992,7 +1003,7 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
 \c@lstlisting=\count356
-Package hyperref Info: Link coloring ON on input line 145.
+Package hyperref Info: Link coloring ON on input line 146.
  (./manual.out)
 (./manual.out)
 \@outlinefile=\write5
@@ -1002,8 +1013,12 @@ Package hyperref Info: Link coloring ON on input line 145.
 
 LaTeX Font Warning: Font shape `TU/LatinModernRoman(0)/m/sc' undefined
 (Font)              using `TU/LatinModernRoman(0)/m/n' instead on input line 15
-3.
+4.
 
+(/usr/share/texmf-dist/tex/latex/amsfonts/umsa.fd)
+(/usr/share/texmf-dist/tex/latex/microtype/mt-msa.cfg)
+(/usr/share/texmf-dist/tex/latex/amsfonts/umsb.fd)
+(/usr/share/texmf-dist/tex/latex/microtype/mt-msb.cfg)
 (/usr/share/texmf-dist/tex/latex/microtype/mt-cmr.cfg) [1
 
 
@@ -1022,75 +1037,42 @@ Cap\'{\i }tulo 1.
 
 ]
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
-nput line 234.
+nput line 235.
 
 
 LaTeX Font Warning: Font shape `TU/LatinModernMono(0)/b/n' undefined
-(Font)              using `TU/LatinModernMono(0)/m/n' instead on input line 272
+(Font)              using `TU/LatinModernMono(0)/m/n' instead on input line 273
 .
 
 Package babel Info: 'brazilian' activates 'portuges' shorthands.
-(babel)             Reported on input line 278.
+(babel)             Reported on input line 279.
 [3]
 Cap\'{\i }tulo 2.
 [4
 
-] [5] [6] [7]
+] [5] [6] [7] [8]
 Cap\'{\i }tulo 3.
-[8
+[9
 
-] [9]
+] [10]
 Cap\'{\i }tulo 4.
-[10
+[11
 
-] [11] [12]
+] [12] [13] [14]
 Cap\'{\i }tulo 5.
-[13
-
-] [14]
-Cap\'{\i }tulo 6.
 [15
 
 ] [16]
-Cap\'{\i }tulo 7.
-! Undefined control sequence.
-<inserted text> ...t} --- dispersão & \checkmark 
-                                                  \ Concluído \\ v0.2.0 & \...
-l.827   \end{tabularx}
-                      
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-! Undefined control sequence.
-<inserted text> ...t} --- dispersão & \checkmark 
-                                                  \ Concluído \\ v0.2.0 & \...
-l.827   \end{tabularx}
-                      
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-! Undefined control sequence.
-<inserted text> ...t} --- dispersão & \checkmark 
-                                                  \ Concluído \\ v0.2.0 & \...
-l.827   \end{tabularx}
-                      
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
+Cap\'{\i }tulo 6.
 [17
+
+] [18]
+Cap\'{\i }tulo 7.
+[19
 
 ]
 Cap\'{\i }tulo 8.
-[18
+[20
 
 ]
 No file manual.ind.
@@ -1104,20 +1086,20 @@ L3 programming layer <2026-01-19>
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
 Package rerunfilecheck Info: File `manual.out' has not changed.
-(rerunfilecheck)             Checksum: 90775ED1DF0A3A77ABA9D69AEB88A1EA;5075.
+(rerunfilecheck)             Checksum: 7FFC66CC844A0F82C34F6BAAB02158AA;5607.
 )
 
 Here is how much of LuaTeX's memory you used:
- 31325 strings out of 476076
- 477835,1373583 words of node,token memory allocated
+ 31921 strings out of 476076
+ 477839,1373583 words of node,token memory allocated
  564 words of node memory still in use:
    5 hlist, 1 vlist, 1 rule, 1 local_par, 7 glue, 3 kern, 1 penalty, 3 glyph, 17
  attribute, 56 glue_spec, 9 attribute_list, 3 write nodes
-   avail lists: 1:7,2:7125,3:425,4:11102,5:8496,6:104,7:11902,8:3,9:21435,10:33,
-11:823
- 52824 multiletter control sequences out of 65536+600000
- 60 fonts using 5904151 bytes
- 116i,12n,114p,1002b,971s stack positions out of 10000i,1000n,20000p,200000b,200000s
+   avail lists: 1:5,2:7125,3:427,4:11102,5:8496,6:104,7:12189,8:3,9:21435,10:33,
+11:841
+ 53358 multiletter control sequences out of 65536+600000
+ 68 fonts using 6398695 bytes
+ 116i,12n,114p,1002b,979s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/opentype/public/lm/lmmono10-italic.otf></usr/share/
 texmf-dist/fonts/opentype/public/lm/lmroman10-bold.otf></usr/share/texmf-dist/fo
 nts/opentype/public/lm/lmroman6-regular.otf></usr/share/texmf-dist/fonts/opentyp
@@ -1130,11 +1112,12 @@ t/fonts/opentype/public/lm/lmroman10-regular.otf></usr/share/texmf-dist/fonts/op
 entype/public/lm/lmroman17-regular.otf></usr/share/texmf-dist/fonts/opentype/pub
 lic/lm/lmroman12-bold.otf></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/
 cmmi12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr
-/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on manual.pdf (19 pages, 151907 bytes).
+/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-di
+st/fonts/type1/public/amsfonts/symbols/msam10.pfb>
+Output written on manual.pdf (21 pages, 167749 bytes).
 
-PDF statistics: 584 PDF objects out of 1000 (max. 8388607)
- 516 compressed objects within 6 object streams
- 278 named destinations out of 1000 (max. 1048576)
- 256 words of extra memory for PDF output out of 10000 (max. 100000000)
+PDF statistics: 636 PDF objects out of 1000 (max. 8388607)
+ 565 compressed objects within 6 object streams
+ 310 named destinations out of 1000 (max. 1048576)
+ 272 words of extra memory for PDF output out of 10000 (max. 100000000)
 

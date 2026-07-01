@@ -378,6 +378,51 @@ let spec = gg::hayplot(df, {"x": "pib", "y": "vida"})
 \end{warnbox}
 
 % ────────────────────────────────────────────────────────────
+\section{\texttt{geom\_line(plot, color, size)} --- Camada de Linha}
+\index{geom\_line()}
+% ────────────────────────────────────────────────────────────
+
+Adiciona uma camada de linha à especificação, conectando as observações do
+DataFrame em ordem. Ideal para séries temporais, tendências e gráficos de evolução.
+Pode ser combinado com \code{geom\_point} para criar gráficos de linhas com marcadores.
+
+\subsection*{Assinatura}
+
+\begin{lstlisting}[style=inline]
+geom_line(plot: Dict, color: String, size: Float) -> Dict
+\end{lstlisting}
+
+\subsection*{Parâmetros}
+
+\begin{tabularx}{\textwidth}{@{}lL{2.5cm}X@{}}
+  \toprule
+  \textbf{Parâmetro} & \textbf{Tipo} & \textbf{Descrição} \\
+  \midrule
+  \code{plot}  & \code{Dict}   & A especificação de plot retornada por \code{hayplot()}. \\[4pt]
+  \code{color} & \code{String} & Cor da linha. Mesmos valores aceitos por \code{geom\_point}. \\[4pt]
+  \code{size}  & \code{Float}  & Espessura da linha em pixels. Valores recomendados: 1.0--5.0. \\
+  \bottomrule
+\end{tabularx}
+
+\subsection*{Retorno}
+
+O mesmo \code{Dict} da especificação com a camada de linha adicionada ao
+campo \code{"layers"}.
+
+\subsection*{Composição de Camadas}
+
+As camadas são renderizadas na \textbf{ordem em que são adicionadas}. Para
+cobrir os pontos sobre a linha (evitando que a linha passe por cima),
+adicione \code{geom\_line} \emph{antes} de \code{geom\_point}:
+
+\begin{lstlisting}[caption={Gráfico de linha com marcadores de pontos}]
+let plot = gg::hayplot(df, {"x": "mes", "y": "vendas"})
+           |> gg::geom_line("blue", 3.0)    // linha primeiro
+           |> gg::geom_point("red", 6.0)   // pontos por cima
+           |> gg::labs("Vendas Mensais", "Mes", "Vendas")
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────
 \section{\texttt{labs(plot, title, x, y)} --- Rótulos}
 \index{labs()}
 % ────────────────────────────────────────────────────────────
@@ -670,6 +715,32 @@ let svg = gg::hayplot(df, {"x": "x", "y": "y"})
 write(svg, "tendencia.svg")
 \end{lstlisting}
 
+\section{Linha com Marcadores de Pontos}
+\index{exemplo!linha com pontos}
+
+Combinando \code{geom\_line} e \code{geom\_point} em uma única pipeline, é
+possível criar gráficos de tendência com marcadores visuais em cada observação.
+A \textbf{ordem das camadas} determina qual é desenhada por cima:
+
+\begin{lstlisting}[caption={examples/line\_and\_scatter.hay}]
+import("sheep-farm/hayplot", as=gg)
+
+// Dados de crescimento de vendas mensais
+let data = {"month": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+            "sales": [10.5, 12.0, 11.2, 14.8, 16.5, 15.0, 18.2, 21.0, 19.5, 22.8, 25.0, 24.2]}
+let df = dataframe(data)
+
+// geom_line adicionado antes de geom_point para que os pontos fiquem por cima
+let plot = gg::hayplot(df, {"x": "month", "y": "sales"})
+    |> gg::geom_line("blue", 3.0)
+    |> gg::geom_point("red", 6.0)
+    |> gg::labs("Sales Growth Over Time", "Month", "Sales (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "sales_growth.svg")
+print("Plot saved to 'sales_growth.svg'!")
+\end{lstlisting}
+
 % ============================================================
 \chapter{Arquitetura Técnica}
 % ============================================================
@@ -815,7 +886,7 @@ no loop de layers.
     \textbf{Versão} & \textbf{Feature}                                           & \textbf{Status} \\
     \midrule
     v0.1.x & \code{geom\_point} --- dispers\~{a}o                                  & $\checkmark$ Conclu\'{i}do \\
-    v0.2.0 & \code{geom\_line} --- séries temporais e tendência                 & Planejado \\
+    v0.1.x & \code{geom\_line} --- s\'{e}ries temporais e tend\^{e}ncia               & $\checkmark$ Conclu\'{i}do \\
     v0.2.0 & \code{geom\_bar} --- barras verticais                              & Planejado \\
     v0.2.0 & \code{geom\_histogram} --- histograma                              & Planejado \\
     v0.3.0 & Suporte a cores hexadecimais (\code{\#RRGGBB})                     & Planejado \\
@@ -839,7 +910,8 @@ no loop de layers.
     \textbf{Função} & \textbf{Entrada} & \textbf{Descrição} \\
     \midrule
     \code{hayplot(df, aes)}                        & \code{DataFrame, Dict}              & Inicializa a spec com dados e mapeamento $x/y$ \\[3pt]
-    \code{geom\_point(plot, color, size)}          & \code{Dict, String, Float}          & Adiciona camada de dispersão \\[3pt]
+    \code{geom\_point(plot, color, size)}          & \code{Dict, String, Float}          & Adiciona camada de dispersão (círculos) \\[3pt]
+    \code{geom\_line(plot, color, size)}           & \code{Dict, String, Float}          & Adiciona camada de linha conectando pontos \\[3pt]
     \code{labs(plot, title, x, y)}                 & \code{Dict, String, String, String} & Define título e nomes dos eixos \\[3pt]
     \code{render\_svg(plot)}                       & \code{Dict}                         & Renderiza e retorna o SVG como \code{String} \\
     \bottomrule
@@ -848,7 +920,7 @@ no loop de layers.
 
 \bigskip
 
-\noindent\textbf{Cores disponíveis em \code{geom\_point()}:}
+\noindent\textbf{Cores disponíveis em \code{geom\_point()} e \code{geom\_line()}:}
 
 \begin{center}
   \begin{tabular}{@{}llll@{}}

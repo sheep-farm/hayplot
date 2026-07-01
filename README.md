@@ -7,11 +7,13 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - **Declarative Plotting Specification**: Build plots step-by-step using Hayashi's native pipe operator `|>`.
 - **Zero-Copy Performance**: Reads coordinates directly from Arrow DataFrames in-memory without serialization or parsing overhead.
 - **Portability**: Renders clean, high-quality, scalable vector graphics (SVG) without any external C dependencies.
+- **Layered Rendering**: Multiple geometry layers can be composed and rendered in order — for example, a `geom_line` underneath `geom_point`.
 
 ## Available Functions
 
 - `hayplot(df: DataFrame, aes: Dict) -> Dict`: Initializes the plot specification with a DataFrame and aesthetic mapping (e.g., `aes={"x": "gdp", "y": "life_exp"}`).
 - `geom_point(plot: Dict, color: String, size: Float) -> Dict`: Appends a scatter plot layer to the specification.
+- `geom_line(plot: Dict, color: String, size: Float) -> Dict`: Appends a line series layer to the specification. Can be combined with `geom_point` to produce line+dot charts.
 - `labs(plot: Dict, title: String, x: String, y: String) -> Dict`: Configures custom title and axis labels.
 - `render_svg(plot: Dict) -> Result<String, String>`: Compiles the plot specification and returns the finished SVG XML code.
 
@@ -27,24 +29,40 @@ This will download the native dynamic library pre-compiled by CI/CD and verify i
 
 ## How to Use in Hayashi
 
-After installation, use the pipe operator `|>` to construct and save plots in your `.hay` script:
+After installation, use the pipe operator `|>` to construct and save plots in your `.hay` script.
+
+**Scatter plot:**
 
 ```text
 import("sheep-farm/hayplot", as=gg)
 
-// 1. Create a heterogeneous dataset
-let d = {"temperatura": [10.2, 14.8, 22.1, 28.5, 35.0], "pressao": [1.1, 1.3, 1.8, 2.4, 3.1]}
+let d = {"gdp": [12000, 24000, 35000, 48000], "life_exp": [68.5, 72.1, 76.4, 79.2]}
 let df = dataframe(d)
 
-// 2. Build the plot specification declaratively using pipes (using positional arguments)
-let plot = gg::hayplot(df, {"x": "temperatura", "y": "pressao"}) |> gg::geom_point("red", 6.0) |> gg::labs("Pressao vs Temperatura", "Temperatura (C)", "Pressao (atm)")
+let plot = gg::hayplot(df, {"x": "gdp", "y": "life_exp"})
+    |> gg::geom_point("blue", 6.0)
+    |> gg::labs("GDP vs Life Expectancy", "GDP per Capita (USD)", "Life Expectancy (Years)")
 
-// 3. Render and retrieve the SVG string
 let svg_content = gg::render_svg(plot)
-
-// 4. Save the SVG file
 write(svg_content, "grafico.svg")
-print("Plot successfully rendered and saved to 'grafico.svg'!")
+print("Plot saved!")
+```
+
+**Line + dots chart (multi-layer):**
+
+```text
+import("sheep-farm/hayplot", as=gg)
+
+let d = {"month": [1.0, 2.0, 3.0, 4.0, 5.0], "sales": [10.5, 12.0, 11.2, 14.8, 16.5]}
+let df = dataframe(d)
+
+let plot = gg::hayplot(df, {"x": "month", "y": "sales"})
+    |> gg::geom_line("blue", 3.0)
+    |> gg::geom_point("red", 6.0)
+    |> gg::labs("Sales Growth", "Month", "Sales (Thousands)")
+
+let svg_content = gg::render_svg(plot)
+write(svg_content, "sales_growth.svg")
 ```
 
 ## License
