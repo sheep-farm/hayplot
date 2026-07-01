@@ -1,0 +1,44 @@
+// New geoms test: ribbon, col, path, jitter, density, violin
+
+// geom_ribbon: confidence band
+let df = df_read_csv("data/regression.csv")
+let plot1 = gg::hayplot(df, {"x": "x", "y": "y"})
+    |> gg::geom_ribbon("gray", 1.0, "ymin", "ymax")
+    |> gg::geom_line("blue", 2.0)
+    |> gg::labs("Ribbon (CI band)", "X", "Y")
+let svg1 = gg::render_svg(plot1)
+write(svg1, "ribbon_test.svg")
+
+// geom_col: bar chart with explicit heights
+let df2 = df_read_csv("data/sales.csv")
+let plot2 = gg::hayplot(df2, {"x": "month", "y": "revenue"})
+    |> gg::geom_col("steelblue", 0.8)
+    |> gg::labs("Column Chart", "Month", "Revenue")
+let svg2 = gg::render_svg(plot2)
+write(svg2, "col_test.svg")
+
+// geom_jitter: scatter with noise
+let df3 = df_read_csv("data/iris.csv")
+let plot3 = gg::hayplot(df3, {"x": "species", "y": "sepal_length"})
+    |> gg::aes_color("species")
+    |> gg::geom_jitter("auto", 3.0, 0.3, 0.0)
+    |> gg::labs("Jittered Scatter", "Species", "Sepal Length")
+let svg3 = gg::render_svg(plot3)
+write(svg3, "jitter_test.svg")
+
+// geom_density: kernel density estimate
+let df4 = df_read_csv("data/returns.csv")
+let plot4 = gg::hayplot(df4, {"x": "index", "y": "returns"})
+    |> gg::geom_density("blue", 2.0, 0.0)
+    |> gg::labs("Density Estimate", "Returns", "Density")
+let svg4 = gg::render_svg(plot4)
+write(svg4, "density_test.svg")
+
+// geom_violin: violin plot by group
+let df5 = df_read_csv("data/iris.csv")
+let plot5 = gg::hayplot(df5, {"x": "index", "y": "sepal_length"})
+    |> gg::aes_color("species")
+    |> gg::geom_violin("auto", 1.0)
+    |> gg::labs("Violin Plot", "Group", "Sepal Length")
+let svg5 = gg::render_svg(plot5)
+write(svg5, "violin_test.svg")

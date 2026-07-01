@@ -310,6 +310,131 @@ pub fn geom_spline(
     plot
 }
 
+/// 13b. geom_ribbon(plot, color, size, ymin_col, ymax_col)
+/// Appends a ribbon (filled band between ymin and ymax) layer.
+/// Used for confidence intervals / error bands. ymin_col and ymax_col
+/// are column names in the DataFrame containing the lower/upper bounds.
+#[hayashi_fn]
+pub fn geom_ribbon(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    ymin_col: String,
+    ymax_col: String
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("ribbon".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("ymin_col".to_string(), HayashiValue::Str(ymin_col));
+        layer.insert("ymax_col".to_string(), HayashiValue::Str(ymax_col));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 13c. geom_col(plot, color, size)
+/// Appends a column (bar) layer where y is the bar height (no stat counting).
+/// Like geom_bar but y values are used directly as bar heights.
+#[hayashi_fn]
+pub fn geom_col(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("col".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 13d. geom_path(plot, color, size)
+/// Appends a path layer: connects points in data order (not sorted by x).
+/// Unlike geom_line which sorts by x, geom_path preserves row order.
+#[hayashi_fn]
+pub fn geom_path(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("path".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 13e. geom_jitter(plot, color, size, width, height)
+/// Appends a jittered scatter layer: points with random noise added.
+/// width/height control the amount of jitter in x/y directions.
+#[hayashi_fn]
+pub fn geom_jitter(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    width: f64,
+    height: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("jitter".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("jitter_width".to_string(), HayashiValue::Float(width));
+        layer.insert("jitter_height".to_string(), HayashiValue::Float(height));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 13f. geom_density(plot, color, size, bandwidth)
+/// Appends a kernel density estimate layer. bandwidth controls smoothing
+/// (0 = automatic via Silverman's rule).
+#[hayashi_fn]
+pub fn geom_density(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64,
+    bandwidth: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("density".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layer.insert("bandwidth".to_string(), HayashiValue::Float(bandwidth));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 13g. geom_violin(plot, color, size)
+/// Appends a violin plot layer: density mirrored around a vertical axis.
+/// Requires aes_color for grouping.
+#[hayashi_fn]
+pub fn geom_violin(
+    mut plot: HashMap<String, HayashiValue>,
+    color: String,
+    size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("violin".to_string()));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
 /// 14. labs(plot, title, x, y)
 /// Adds plot title and custom axis labels to the plot spec dictionary.
 #[hayashi_fn]
@@ -2863,6 +2988,168 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     }
                                     _ => {
                                         return Err(format!("Unknown element_type: {}", element_type));
+                                    }
+                                }
+                            }
+                            "ribbon" => {
+                                // Draw a filled ribbon between ymin and ymax
+                                let style = parse_color(color_name);
+                                let ymin_col = match layer.get("ymin_col") {
+                                    Some(HayashiValue::Str(s)) => s.as_str(),
+                                    _ => return Err("ribbon requires ymin_col".to_string()),
+                                };
+                                let ymax_col = match layer.get("ymax_col") {
+                                    Some(HayashiValue::Str(s)) => s.as_str(),
+                                    _ => return Err("ribbon requires ymax_col".to_string()),
+                                };
+                                let ymin_vals = extract_column_f64(struct_arr, ymin_col)?;
+                                let ymax_vals = extract_column_f64(struct_arr, ymax_col)?;
+                                let x_vals = &x_series_values[0];
+
+                                let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(ymin_vals.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y)).collect();
+                                pts.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+                                let mut pts_upper: Vec<(f64,f64)> = x_vals.iter().zip(ymax_vals.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y)).collect();
+                                pts_upper.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+                                if pts.len() >= 2 && pts.len() == pts_upper.len() {
+                                    let mut polygon = pts.clone();
+                                    polygon.extend(pts_upper.into_iter().rev());
+                                    chart.draw_series(std::iter::once(
+                                        Polygon::new(polygon, style.filled())
+                                    )).map_err(|e| e.to_string())?;
+                                }
+                            }
+                            "col" => {
+                                // Column chart: y is bar height, bars at x positions
+                                let style = parse_color(color_name);
+                                let bar_width = size.max(1.0);
+                                let x_vals = &x_series_values[0];
+                                chart.draw_series(
+                                    x_vals.iter().zip(y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| {
+                                            Rectangle::new(
+                                                [(x - bar_width/2.0, 0.0), (x + bar_width/2.0, y)],
+                                                style.filled()
+                                            )
+                                        })
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            "path" => {
+                                // Path: connects points in data order (not sorted by x)
+                                let style = parse_color(color_name).stroke_width(size as u32);
+                                let x_vals = &x_series_values[0];
+                                let points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
+                                if points.len() >= 2 {
+                                    chart.draw_series(
+                                        LineSeries::new(points.into_iter(), style)
+                                    ).map_err(|e| e.to_string())?;
+                                }
+                            }
+                            "jitter" => {
+                                // Jittered scatter: points with random noise
+                                let jw = match layer.get("jitter_width") {
+                                    Some(HayashiValue::Float(f)) => *f,
+                                    Some(HayashiValue::Int(i)) => *i as f64,
+                                    _ => 0.4,
+                                };
+                                let jh = match layer.get("jitter_height") {
+                                    Some(HayashiValue::Float(f)) => *f,
+                                    Some(HayashiValue::Int(i)) => *i as f64,
+                                    _ => 0.4,
+                                };
+                                let x_vals = &x_series_values[0];
+                                // Use a simple LCG for deterministic jitter
+                                let mut seed: u64 = 12345;
+                                let mut rng = || {
+                                    seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                                    (seed >> 33) as f64 / (u32::MAX as f64) - 0.5
+                                };
+                                let style = parse_color(color_name);
+                                chart.draw_series(
+                                    x_vals.iter().zip(y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| {
+                                            let dx = rng() * jw;
+                                            let dy = rng() * jh;
+                                            Circle::new((x + dx, y + dy), size as i32, style.clone())
+                                        })
+                                ).map_err(|e| e.to_string())?;
+                            }
+                            "density" => {
+                                // Kernel density estimate of y values
+                                let bw = match layer.get("bandwidth") {
+                                    Some(HayashiValue::Float(f)) => *f,
+                                    Some(HayashiValue::Int(i)) => *i as f64,
+                                    _ => 0.0,
+                                };
+                                let style = parse_color(color_name).stroke_width(size as u32);
+                                let data: Vec<f64> = y_values.iter()
+                                    .filter(|&&v| !v.is_nan())
+                                    .cloned().collect();
+                                if data.len() >= 2 {
+                                    let n = data.len() as f64;
+                                    let mean = data.iter().sum::<f64>() / n;
+                                    let std = (data.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n).sqrt();
+                                    let h = if bw > 0.0 { bw } else { 1.06 * std * n.powf(-0.2) };
+                                    let y_min_d = data.iter().cloned().fold(f64::INFINITY, |a, b| a.min(b));
+                                    let y_max_d = data.iter().cloned().fold(f64::NEG_INFINITY, |a, b| a.max(b));
+                                    let range = y_max_d - y_min_d;
+                                    let n_pts = 100;
+                                    let kde: Vec<(f64, f64)> = (0..n_pts).map(|i| {
+                                        let x = y_min_d + range * i as f64 / (n_pts - 1) as f64;
+                                        let density: f64 = data.iter()
+                                            .map(|&d| (-( (x - d) / h).powi(2) / 2.0).exp())
+                                            .sum::<f64>() / (n * h * (2.0 * std::f64::consts::PI).sqrt());
+                                        (x, density)
+                                    }).collect();
+                                    chart.draw_series(
+                                        LineSeries::new(kde.into_iter(), style)
+                                    ).map_err(|e| e.to_string())?;
+                                }
+                            }
+                            "violin" => {
+                                // Violin plot: density mirrored vertically for each group
+                                if let Some((ref unique_groups, ref group_indices)) = aes_groups {
+                                    let style = parse_color(color_name);
+                                    for (gi, _gn) in unique_groups.iter().enumerate() {
+                                        let group_y: Vec<f64> = y_values.iter().zip(group_indices.iter())
+                                            .filter(|(&y, &g)| !y.is_nan() && g == gi)
+                                            .map(|(&y, _)| y)
+                                            .collect();
+                                        if group_y.len() < 2 { continue; }
+                                        let n = group_y.len() as f64;
+                                        let mean = group_y.iter().sum::<f64>() / n;
+                                        let std = (group_y.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n).sqrt();
+                                        let h = 1.06 * std * n.powf(-0.2);
+                                        let y_min_g = group_y.iter().cloned().fold(f64::INFINITY, |a, b| a.min(b));
+                                        let y_max_g = group_y.iter().cloned().fold(f64::NEG_INFINITY, |a, b| a.max(b));
+                                        let range = y_max_g - y_min_g;
+                                        let n_pts = 50;
+                                        let center = gi as f64;
+                                        let kde: Vec<(f64, f64)> = (0..n_pts).map(|i| {
+                                            let y = y_min_g + range * i as f64 / (n_pts - 1) as f64;
+                                            let density: f64 = group_y.iter()
+                                                .map(|&d| (-( (y - d) / h).powi(2) / 2.0).exp())
+                                                .sum::<f64>() / (n * h * (2.0 * std::f64::consts::PI).sqrt());
+                                            (center + density * 0.3, y)
+                                        }).collect();
+                                        let kde_mirror: Vec<(f64, f64)> = kde.iter().rev()
+                                            .map(|(x, y)| (2.0 * center - x, *y))
+                                            .collect();
+                                        let mut polygon = kde;
+                                        polygon.extend(kde_mirror);
+                                        chart.draw_series(std::iter::once(
+                                            Polygon::new(polygon, style.filled())
+                                        )).map_err(|e| e.to_string())?;
                                     }
                                 }
                             }

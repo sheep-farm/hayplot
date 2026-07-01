@@ -27,6 +27,12 @@ A native plotting plugin for the **Hayashi** language, implementing a Grammar of
 - `geom_abline(plot: Dict, color: String, size: Float, slope: Float, intercept: Float) -> Dict`: Appends a diagonal reference line (y = slope * x + intercept).
 - `geom_step(plot: Dict, color: String, size: Float, direction: String) -> Dict`: Appends a step line (horizontal then vertical). Direction can be "hv" or "vh".
 - `geom_spline(plot, Dict, color: String, size: Float, tension: Float) -> Dict`: Appends a smooth spline curve (Catmull-Rom interpolation). tension: 0.0 (linear) to 1.0 (very smooth), defaults to 0.2 (conservative).
+- `geom_ribbon(plot: Dict, color: String, size: Float, ymin_col: String, ymax_col: String) -> Dict`: Appends a filled ribbon band between ymin and ymax columns. Used for confidence intervals / error bands.
+- `geom_col(plot: Dict, color: String, size: Float) -> Dict`: Appends a column (bar) layer where y values are used directly as bar heights (no stat counting).
+- `geom_path(plot: Dict, color: String, size: Float) -> Dict`: Connects points in data order (not sorted by x). Unlike geom_line which sorts by x, geom_path preserves row order.
+- `geom_jitter(plot: Dict, color: String, size: Float, width: Float, height: Float) -> Dict`: Jittered scatter plot. width/height control jitter amount in x/y directions.
+- `geom_density(plot: Dict, color: String, size: Float, bandwidth: Float) -> Dict`: Kernel density estimate (Gaussian KDE). bandwidth=0 uses Silverman's rule.
+- `geom_violin(plot: Dict, color: String, size: Float) -> Dict`: Violin plot (mirrored density). Requires aes_color for grouping.
 - `geom_smooth(plot: Dict, color: String, size: Float, method: String, se: Bool) -> Dict`: Appends a smoothed conditional mean (linear regression or LOESS). method: "lm" for linear regression. se: whether to show standard error bands.
 - `geom_text(plot: Dict, label: String, x: Float, y: Float, color: String, size: Float) -> Dict`: Adds text annotations at specified coordinates.
 - `draw_element(plot, Dict, element_type: String, params: Dict) -> Dict`: Draws arbitrary geometric elements for annotations. element_type: "circle", "rect", "line_segment", "arrow". params: element-specific dict (x, y, size, width, height, x1, y1, x2, y2, arrow_size, color).
