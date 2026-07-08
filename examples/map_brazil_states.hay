@@ -5,7 +5,7 @@ import("sheep-farm/hayplot", as=gg)
 import("sheep-farm/haygeobr", as=geo)
 
 // Load Brazilian states data (2020)
-let states = geo::haygeobr("read_state", {"year": 2020})
+let states = geo::read_state({"year": 2020})
 
 // Initialize plot
 let plot = gg::hayplot(states, {"x": "code_state", "y": "name_state"})
