@@ -1,25 +1,24 @@
-# Map of Brazilian states using haygeobr
-# This example requires the haygeobr plugin to be installed
+// Map of Brazilian states using haygeobr
+// Note: haygeobr must be installed first via: hay install flavop/haygeobr
 
-# Install haygeobr if not already installed
-hay install flavop/haygeobr
+import("sheep-farm/hayplot", as=gg)
+import("flavop/haygeobr", as=geo)
 
-# Load Brazilian states data (2020)
-states = haygeobr("read_state", {"year": 2020})
+// Load Brazilian states data (2020)
+let states = geo::haygeobr("read_state", {"year": 2020})
 
-# Initialize plot
-plot = hayplot(states, {"x": "code_state", "y": "name_state"})
+// Initialize plot
+let plot = gg::hayplot(states, {"x": "code_state", "y": "name_state"})
+        |> gg::geom_map("#2D3E50", "#5D7B9D", 0.5)
+        |> gg::set_dimensions(800, 600)
 
-# Add map geometry with custom styling
-# Fill: dark blue, Stroke: light blue, Width: 0.5px
-plot = geom_map(plot, "#2D3E50", "#5D7B9D", 0.5)
+// Render and save
+let svg_content = gg::render_svg(plot)
+write(svg_content, "map_brazil_states.svg")
+print("Brazil states map saved to 'map_brazil_states.svg'!")
 
-# Set dimensions
-plot = set_dimensions(plot, 800, 600)
-
-# Render and save
-save_svg(plot, "map_brazil_states.svg")
-
-# For choropleth by region, uncomment the following:
-# plot = aes_color(plot, "name_region")
-# plot = geom_map(plot, "auto", "white", 0.5)
+// For choropleth by region, uncomment the following:
+// let plot = gg::hayplot(states, {"x": "code_state", "y": "name_state"})
+//         |> gg::aes_color("name_region")
+//         |> gg::geom_map("auto", "white", 0.5)
+//         |> gg::set_dimensions(800, 600)

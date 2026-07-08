@@ -1,6 +1,5 @@
 # Test geom_map with haygeobr data
-# Load haygeobr plugin
-hay install flavop/haygeobr
+# Note: haygeobr must be installed first via: hay install flavop/haygeobr
 
 # Get Brazilian states data
 states = haygeobr("read_state", {"year": 2020})
