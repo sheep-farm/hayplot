@@ -1,8 +1,8 @@
 // Map of Brazilian states using haygeobr
-// Note: haygeobr must be installed first via: hay install flavop/haygeobr
+// Note: haygeobr must be installed first via: hay install sheep-farm/haygeobr
 
 import("sheep-farm/hayplot", as=gg)
-import("flavop/haygeobr", as=geo)
+import("sheep-farm/haygeobr", as=geo)
 
 // Load Brazilian states data (2020)
 let states = geo::haygeobr("read_state", {"year": 2020})

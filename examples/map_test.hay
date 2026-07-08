@@ -1,5 +1,5 @@
 # Test geom_map with haygeobr data
-# Note: haygeobr must be installed first via: hay install flavop/haygeobr
+# Note: haygeobr must be installed first via: hay install sheep-farm/haygeobr
 
 # Get Brazilian states data
 states = haygeobr("read_state", {"year": 2020})
