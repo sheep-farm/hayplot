@@ -1,0 +1,26 @@
+# Choropleth map example - color regions by category
+# This example demonstrates using aes_color to color regions based on a column
+
+# Create a DataFrame with WKT geometry and a category column
+data = load("csv", "geometry,name,region
+POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0)),North,North
+POLYGON ((20 20, 20 30, 30 30, 30 20, 20 20)),South,South
+POLYGON ((5 15, 5 25, 15 25, 15 15, 5 15)),East,East
+POLYGON ((25 5, 25 15, 35 15, 35 5, 25 5)),West,West
+POLYGON ((12 8, 12 18, 22 18, 22 8, 12 8)),Central,Central")
+
+# Initialize plot
+plot = hayplot(data, {"x": "name", "y": "name"})
+
+# Map region column to colors (choropleth)
+plot = aes_color(plot, "region")
+
+# Add map geometry - fill will be determined by aes_color
+plot = geom_map(plot, "auto", "white", 1.0)
+
+# Set dimensions and background
+plot = set_dimensions(plot, 500, 500)
+plot = set_background_color(plot, "#F5F5F5")
+
+# Render and save
+save_svg(plot, "map_choropleth.svg")

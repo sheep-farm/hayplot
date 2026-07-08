@@ -1,0 +1,20 @@
+# Simple map example with mock WKT data
+# This example creates a simple map using inline WKT geometry
+
+# Create a DataFrame with WKT geometry
+data = load("csv", "geometry,name
+POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0)),Region A
+POLYGON ((20 20, 20 30, 30 30, 30 20, 20 20)),Region B
+POLYGON ((5 15, 5 25, 15 25, 15 15, 5 15)),Region C")
+
+# Initialize plot
+plot = hayplot(data, {"x": "name", "y": "name"})
+
+# Add map geometry with custom styling
+plot = geom_map(plot, "#4CAF50", "#2E7D32", 1.0)
+
+# Set dimensions
+plot = set_dimensions(plot, 400, 400)
+
+# Render and save
+save_svg(plot, "map_simple.svg")
