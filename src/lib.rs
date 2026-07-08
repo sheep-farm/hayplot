@@ -14,6 +14,7 @@ hayashi_plugin!();
 // Internal modules
 mod utils;
 mod math;
+mod wkt;
 
 // Re-export utilities for internal use
 pub use utils::{extract_column_f64, extract_column_string, unique_strings, filter_struct_by_mask, filter_array_by_mask, parse_color, parse_color_to_rgb, get_series_color};
@@ -868,6 +869,30 @@ pub fn geom_text(
         layer.insert("label".to_string(), HayashiValue::Str(label));
         layer.insert("x".to_string(), HayashiValue::Float(x));
         layer.insert("y".to_string(), HayashiValue::Float(y));
+        layer.insert("color".to_string(), HayashiValue::Str(color));
+        layer.insert("size".to_string(), HayashiValue::Float(size));
+        layers.push(HayashiValue::Dict(layer));
+    }
+    plot
+}
+
+/// 25.5. geom_map(plot, fill, color, size)
+/// Appends a map geometry layer. Reads the `geometry` column (WKT) from the
+/// DataFrame and draws polygons as SVG paths.
+/// fill: fill color for polygons (e.g. "#2D3E50" or "auto" for aes_color)
+/// color: stroke/border color (e.g. "#FEBF57" or "none")
+/// size: stroke width in pixels
+#[hayashi_fn]
+pub fn geom_map(
+    mut plot: HashMap<String, HayashiValue>,
+    fill: String,
+    color: String,
+    size: f64
+) -> HashMap<String, HayashiValue> {
+    if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
+        let mut layer = HashMap::new();
+        layer.insert("geom".to_string(), HayashiValue::Str("map".to_string()));
+        layer.insert("fill".to_string(), HayashiValue::Str(fill));
         layer.insert("color".to_string(), HayashiValue::Str(color));
         layer.insert("size".to_string(), HayashiValue::Float(size));
         layers.push(HayashiValue::Dict(layer));
@@ -1905,7 +1930,7 @@ pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String>
 }
 
 /// Internal implementation of render_svg (not decorated, can be called from Rust)
-fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String> {
+pub(crate) fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String> {
     // 0. Check for faceting — if present, delegate to render_facets_impl
     let facet_type = plot.get("spec").and_then(|s| match s {
         HayashiValue::Dict(d) => d.get("facet_type").and_then(|v| match v {
@@ -1918,6 +1943,19 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     if let Some(ft) = facet_type {
         if ft == "wrap" || ft == "grid" {
             return render_facets_impl(plot);
+        }
+    }
+
+    // 0.5. Check for map geometry — if present, delegate to render_map_impl
+    if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+        if layers.iter().any(|l| {
+            if let HayashiValue::Dict(d) = l {
+                d.get("geom").and_then(|g| {
+                    if let HayashiValue::Str(s) = g { Some(s == "map") } else { None }
+                }).unwrap_or(false)
+            } else { false }
+        }) {
+            return render_map_impl(plot);
         }
     }
 
@@ -3504,6 +3542,142 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     }
     
     Ok(svg_buffer)
+}
+
+/// Render a map from WKT geometry column.
+/// Reads the `geometry` column (WKT strings), parses them, projects to pixel space,
+/// and draws as SVG paths. Supports choropleth via aes_color.
+fn render_map_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String> {
+    use wkt::{parse_wkt, compute_bounds, geometry_to_svg_path};
+
+    // 1. Get DataFrame
+    let df_val = plot.get("data")
+        .ok_or_else(|| "No data in plot specification".to_string())?;
+    let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_val.clone())
+        .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
+    let struct_arr = df_arr.as_any()
+        .downcast_ref::<StructArray>()
+        .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
+
+    // 2. Extract geometry column (WKT strings)
+    let geom_col_name = "geometry";
+    let geom_col_idx = struct_arr.fields().iter()
+        .position(|f| f.name() == geom_col_name)
+        .ok_or_else(|| format!("Column '{}' not found in DataFrame", geom_col_name))?;
+    let _geom_array = struct_arr.column(geom_col_idx);
+    let geom_strings = utils::extract_column_string(struct_arr, geom_col_name)?;
+
+    // 3. Parse all WKT geometries
+    let mut geometries = Vec::new();
+    for wkt in &geom_strings {
+        match parse_wkt(wkt) {
+            Ok(g) => geometries.push(g),
+            Err(e) => return Err(format!("Failed to parse WKT '{}': {}", wkt, e)),
+        }
+    }
+
+    if geometries.is_empty() {
+        return Err("No valid geometries found".into());
+    }
+
+    // 4. Compute overall bounds
+    let bounds = compute_bounds(&geometries)
+        .unwrap_or_else(|| panic!("Failed to compute bounds from geometries"));
+
+    // 5. Get plot dimensions and padding
+    let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        let w = spec.get("width").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(800.0);
+        let h = spec.get("height").and_then(|v| match v {
+            HayashiValue::Int(i) => Some(*i as f64),
+            HayashiValue::Float(f) => Some(*f),
+            _ => None,
+        }).unwrap_or(600.0);
+        (w, h)
+    } else {
+        (800.0, 600.0)
+    };
+
+    let padding = 20.0;
+
+    // 6. Get fill color (aes_color or fixed)
+    let fill_name = if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+        layers.iter()
+            .filter_map(|l| if let HayashiValue::Dict(d) = l { Some(d) } else { None })
+            .find_map(|d| d.get("fill").and_then(|v| if let HayashiValue::Str(s) = v { Some(s.as_str()) } else { None }))
+    } else { None };
+    let fill_name = fill_name.unwrap_or_else(|| "#2D3E50");
+
+    // 7. Get stroke color and width
+    let stroke_name = if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+        layers.iter()
+            .filter_map(|l| if let HayashiValue::Dict(d) = l { Some(d) } else { None })
+            .find_map(|d| d.get("color").and_then(|v| if let HayashiValue::Str(s) = v { Some(s.as_str()) } else { None }))
+    } else { None };
+    let stroke_name = stroke_name.unwrap_or_else(|| "none");
+
+    let stroke_width = if let Some(HayashiValue::List(layers)) = plot.get("layers") {
+        layers.iter()
+            .filter_map(|l| if let HayashiValue::Dict(d) = l { Some(d) } else { None })
+            .find_map(|d| d.get("size").and_then(|v| match v {
+                HayashiValue::Float(f) => Some(*f),
+                HayashiValue::Int(i) => Some(*i as f64),
+                _ => None,
+            }))
+    } else { None };
+    let stroke_width = stroke_width.unwrap_or(0.5);
+
+    // 8. Check for aes_color (choropleth)
+    let aes_color_col = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("aes_color").and_then(|v| if let HayashiValue::Str(s) = v { Some(s.as_str()) } else { None })
+    } else { None };
+
+    let colors: Vec<String> = if let Some(col) = aes_color_col {
+        // Extract the color column and map unique values to colors
+        let color_values = utils::extract_column_string(struct_arr, col)?;
+        let unique_vals = utils::unique_strings(&color_values);
+        let palette = utils::get_series_color;
+        color_values.iter()
+            .map(|s| {
+                let idx = unique_vals.iter().position(|u| u == s).unwrap_or(0);
+                let rgb = palette(idx);
+                format!("#{:02x}{:02x}{:02x}", rgb.0, rgb.1, rgb.2)
+            })
+            .collect()
+    } else {
+        // Single fill color for all
+        vec![fill_name.to_owned(); geometries.len()]
+    };
+
+    // 9. Build SVG
+    let mut svg = format!(r#"<svg width="{}" height="{}" xmlns="http://www.w3.org/2000/svg">"#, width, height);
+
+    // Background
+    let bg_color = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+        spec.get("background_color").and_then(|v| if let HayashiValue::Str(s) = v { Some(s.as_str()) } else { None })
+    } else { None };
+    let bg_color = bg_color.unwrap_or_else(|| "white");
+    svg = format!(r#"{}<rect width="100%" height="100%" fill="{}"/>"#, svg, bg_color);
+
+    // Draw each geometry as a path
+    for (i, geom) in geometries.iter().enumerate() {
+        let fill = colors.get(i).map(|s| s.as_str()).unwrap_or(fill_name);
+        let path_d = geometry_to_svg_path(geom, bounds, width, height, padding);
+
+        let stroke_attr = if stroke_name == "none" {
+            "stroke=\"none\"".to_string()
+        } else {
+            format!("stroke=\"{}\" stroke-width=\"{}\"", stroke_name, stroke_width)
+        };
+
+        svg = format!(r#"{}<path d="{}" fill="{}" {}/>"#, svg, path_d, fill, stroke_attr);
+    }
+
+    svg = format!("{}</svg>", svg);
+    Ok(svg)
 }
 
 #[cfg(test)]

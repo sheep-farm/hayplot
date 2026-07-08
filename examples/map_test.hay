@@ -1,0 +1,18 @@
+# Test geom_map with haygeobr data
+# Load haygeobr plugin
+hay install flavop/haygeobr
+
+# Get Brazilian states data
+states = haygeobr("read_state", {"year": 2020})
+
+# Initialize plot with data
+plot = hayplot(states, {"x": "code_state", "y": "name_state"})
+
+# Add map geometry
+plot = geom_map(plot, "#2D3E50", "none", 0.5)
+
+# Render to SVG
+svg = render_svg(plot)
+
+# Save to file
+save_svg(plot, "/tmp/test_map.svg")

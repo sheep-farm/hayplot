@@ -1,5 +1,75 @@
 #[cfg(test)]
 mod tests {
+    use hayashi_plugin_sdk::arrow::array::{StringArray, StructArray, ArrayRef};
+    use hayashi_plugin_sdk::arrow::datatypes::{DataType, Field, Fields};
+    use std::sync::Arc;
+    use crate::wkt::{parse_wkt, geometry_to_svg_path};
+    use crate::render_svg_impl;
+
+    // ==================== WKT parsing tests ====================
+
+    #[test]
+    fn test_wkt_multipolygon_parsing() {
+        let wkt = "MULTIPOLYGON (((0 0, 0 10, 10 10, 10 0, 0 0)), ((20 20, 20 30, 30 30, 30 20, 20 20)))";
+        let geom = parse_wkt(wkt).unwrap();
+        let bounds = geom.bounds().unwrap();
+        assert_eq!(bounds, (0.0, 0.0, 30.0, 30.0));
+    }
+
+    #[test]
+    fn test_wkt_to_svg_path() {
+        let wkt = "POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0))";
+        let geom = parse_wkt(wkt).unwrap();
+        let bounds = geom.bounds().unwrap();
+        let path = geometry_to_svg_path(&geom, bounds, 100.0, 100.0, 10.0);
+        assert!(path.starts_with("M"));
+        assert!(path.contains("Z"));
+    }
+
+    #[test]
+    fn test_render_map_with_simple_polygon() {
+        use hayashi_plugin_sdk::value::{HayashiValue, IntoHayashi};
+
+        // Create a simple DataFrame with WKT geometry
+        let geom_col = Arc::new(StringArray::from(vec![
+            "POLYGON ((0 0, 0 10, 10 10, 10 0, 0 0))".to_string(),
+            "POLYGON ((20 20, 20 30, 30 30, 30 20, 20 20))".to_string(),
+        ]));
+
+        let fields = Fields::from(vec![
+            Field::new("geometry", DataType::Utf8, false),
+        ]);
+
+        let struct_arr = StructArray::new(fields, vec![geom_col], None);
+        let df: ArrayRef = Arc::new(struct_arr);
+
+        // Create plot spec
+        let mut plot = std::collections::HashMap::new();
+        plot.insert("data".to_string(), df.into_hayashi());
+        plot.insert("mapping".to_string(), HayashiValue::Dict(std::collections::HashMap::new()));
+        plot.insert("layers".to_string(), HayashiValue::List(vec![
+            HayashiValue::Dict({
+                let mut layer = std::collections::HashMap::new();
+                layer.insert("geom".to_string(), HayashiValue::Str("map".to_string()));
+                layer.insert("fill".to_string(), HayashiValue::Str("#2D3E50".to_string()));
+                layer.insert("color".to_string(), HayashiValue::Str("none".to_string()));
+                layer.insert("size".to_string(), HayashiValue::Float(0.5));
+                layer
+            })
+        ]));
+        plot.insert("labs".to_string(), HayashiValue::Dict(std::collections::HashMap::new()));
+        plot.insert("scales".to_string(), HayashiValue::Dict(std::collections::HashMap::new()));
+        plot.insert("spec".to_string(), HayashiValue::Dict(std::collections::HashMap::new()));
+        plot.insert("coords".to_string(), HayashiValue::Dict(std::collections::HashMap::new()));
+        plot.insert("theme".to_string(), HayashiValue::Dict(std::collections::HashMap::new()));
+
+        // Render
+        let svg = render_svg_impl(plot).unwrap();
+        assert!(svg.contains("<svg"));
+        assert!(svg.contains("<path"));
+        assert!(svg.contains("</svg>"));
+    }
+
     // ==================== Legend tests ====================
 
     #[test]
