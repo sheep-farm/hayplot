@@ -1,6 +1,6 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, StructArray};
-use hayashi_plugin_sdk::value::{FromHayashi, HayashiValue, IntoHayashi};
+use hayashi_plugin_sdk::value::{FromHayashi, HayashiValue, IntoHayashi, Plot};
 use hayashi_plugin_sdk::{hayashi_fn, hayashi_plugin};
 use plotters::prelude::*;
 use std::collections::HashMap;
@@ -759,20 +759,16 @@ pub fn set_padding_dict(
 }
 
 /// 18. save_svg(plot, filename)
-/// Renders the plot and saves it directly to a file. Returns the SVG content as a string.
-/// This is a convenience function that combines render_svg() + write().
+/// Renderiza o plot, salva em arquivo e retorna um `Plot` composável.
 #[hayashi_fn]
 pub fn save_svg(
     plot: HashMap<String, HayashiValue>,
     filename: String,
-) -> Result<HayashiValue, String> {
+) -> Result<Plot, String> {
     let svg_content = render_svg_impl(plot)?;
-
-    // Write to file using std::fs
     std::fs::write(&filename, &svg_content)
         .map_err(|e| format!("Failed to write SVG to '{}': {}", filename, e))?;
-
-    Ok(HayashiValue::Str(svg_content))
+    Ok(Plot::plotters_svg(svg_content))
 }
 
 /// 21. set_background_color(plot, color)
@@ -1140,24 +1136,18 @@ pub fn facet_grid(
 #[cfg(feature = "png")]
 /// 23. save_png(plot, filename)
 /// Renders the plot and saves it as a PNG file. Requires the "png" feature.
-/// Returns the PNG binary data as a string (base64-encoded).
+/// Renderiza o plot como PNG, salva em arquivo e retorna um `Plot` (PNG base64).
 #[hayashi_fn]
 pub fn save_png(
     plot: HashMap<String, HayashiValue>,
     filename: String,
-) -> Result<HayashiValue, String> {
+) -> Result<Plot, String> {
     use base64::{engine::general_purpose, Engine as _};
 
     let png_data = render_png_impl(plot)?;
-
-    // Write to file using std::fs
     std::fs::write(&filename, &png_data)
         .map_err(|e| format!("Failed to write PNG to '{}': {}", filename, e))?;
-
-    // Return base64-encoded string for potential use
-    Ok(HayashiValue::Str(
-        general_purpose::STANDARD.encode(&png_data),
-    ))
+    Ok(Plot::plotters_png_b64(general_purpose::STANDARD.encode(&png_data)))
 }
 
 #[cfg(feature = "png")]
@@ -2206,10 +2196,11 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
 }
 
 /// 4. render_svg(plot)
-/// Materializes the plot spec dictionary and shared Arrow DataFrame into a finished SVG string.
+/// Materializes the plot spec dictionary and shared Arrow DataFrame into a finished SVG.
+/// Retorna um `Plot` composável — o host decide como renderizar (arquivo, terminal, browser).
 #[hayashi_fn]
-pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<String, String> {
-    render_svg_impl(plot)
+pub fn render_svg(plot: HashMap<String, HayashiValue>) -> Result<Plot, String> {
+    render_svg_impl(plot).map(Plot::plotters_svg)
 }
 
 /// Internal implementation of render_svg (not decorated, can be called from Rust)
