@@ -104,7 +104,12 @@ mod tests {
     fn test_facet_grid_dimensions() {
         // 3 row groups x 4 col groups => 12 panels
         let row_groups = vec!["a".to_string(), "b".to_string(), "c".to_string()];
-        let col_groups = vec!["x".to_string(), "y".to_string(), "z".to_string(), "w".to_string()];
+        let col_groups = vec![
+            "x".to_string(),
+            "y".to_string(),
+            "z".to_string(),
+            "w".to_string(),
+        ];
         let nrows = row_groups.len();
         let ncols = col_groups.len();
         assert_eq!(nrows, 3);
@@ -147,26 +152,38 @@ mod tests {
     #[test]
     fn test_unique_strings_preserves_order() {
         let values = vec![
-            "b".to_string(), "a".to_string(), "b".to_string(),
-            "c".to_string(), "a".to_string(), "".to_string(),
+            "b".to_string(),
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "a".to_string(),
+            "".to_string(),
         ];
         let unique = crate::unique_strings(&values);
         // Order of first appearance: b, a, c (empty string skipped)
-        assert_eq!(unique, vec!["b".to_string(), "a".to_string(), "c".to_string()]);
+        assert_eq!(
+            unique,
+            vec!["b".to_string(), "a".to_string(), "c".to_string()]
+        );
     }
 
     #[test]
     fn test_aes_color_group_mapping() {
         // Simulate mapping group values to palette indices
-        let group_values = vec!["setosa".to_string(), "versicolor".to_string(), "setosa".to_string()];
+        let group_values = vec![
+            "setosa".to_string(),
+            "versicolor".to_string(),
+            "setosa".to_string(),
+        ];
         let unique = crate::unique_strings(&group_values);
         assert_eq!(unique.len(), 2);
         assert_eq!(unique[0], "setosa");
         assert_eq!(unique[1], "versicolor");
 
-        let indices: Vec<usize> = group_values.iter().map(|v| {
-            unique.iter().position(|u| u == v).unwrap_or(0)
-        }).collect();
+        let indices: Vec<usize> = group_values
+            .iter()
+            .map(|v| unique.iter().position(|u| u == v).unwrap_or(0))
+            .collect();
         assert_eq!(indices, vec![0, 1, 0]);
     }
 
@@ -241,7 +258,9 @@ mod tests {
     fn test_jitter_deterministic() {
         // LCG-based jitter should be deterministic
         let next = |seed: &mut u64| {
-            *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             (*seed >> 33) as f64 / (u32::MAX as f64) - 0.5
         };
         let mut s1 = 12345u64;

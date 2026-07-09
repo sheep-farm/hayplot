@@ -1,7 +1,7 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
-use hayashi_plugin_sdk::{hayashi_fn, hayashi_plugin};
 use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, StructArray};
-use hayashi_plugin_sdk::value::{HayashiValue, FromHayashi, IntoHayashi};
+use hayashi_plugin_sdk::value::{FromHayashi, HayashiValue, IntoHayashi};
+use hayashi_plugin_sdk::{hayashi_fn, hayashi_plugin};
 use plotters::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,21 +13,21 @@ use base64;
 hayashi_plugin!();
 
 // Internal modules
-mod utils;
 mod math;
+mod utils;
 
 // Re-export utilities for internal use
-pub use utils::{extract_column_f64, extract_column_string, unique_strings, filter_struct_by_mask, filter_array_by_mask, parse_color, parse_color_to_rgb, get_series_color};
 pub use math::{catmull_rom_spline, linear_regression, linear_regression_se};
+pub use utils::{
+    extract_column_f64, extract_column_string, filter_array_by_mask, filter_struct_by_mask,
+    get_series_color, parse_color, parse_color_to_rgb, unique_strings,
+};
 
 /// 1. hayplot(df, aes)
 /// Initializes the plot specification dictionary with data and aesthetic mapping.
 /// Accepts: {"x": "col_x"} or {"x": "col_x1,col_x2,..."} for multiple series (comma-separated)
 #[hayashi_fn]
-pub fn hayplot(
-    df: ArrayRef,
-    aes: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn hayplot(df: ArrayRef, aes: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     let mut plot = HashMap::new();
     plot.insert("data".to_string(), df.into_hayashi());
     plot.insert("mapping".to_string(), HayashiValue::Dict(aes));
@@ -46,7 +46,7 @@ pub fn hayplot(
 #[hayashi_fn]
 pub fn aes_color(
     mut plot: HashMap<String, HayashiValue>,
-    col: String
+    col: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("aes_color".to_string(), HayashiValue::Str(col));
@@ -64,7 +64,7 @@ pub fn aes_color(
 pub fn geom_point(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    size: f64
+    size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -82,7 +82,7 @@ pub fn geom_point(
 pub fn geom_line(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    size: f64
+    size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -100,7 +100,7 @@ pub fn geom_line(
 pub fn geom_bar(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    width: f64
+    width: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -118,11 +118,14 @@ pub fn geom_bar(
 pub fn geom_histogram(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    bins: i64
+    bins: i64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
-        layer.insert("geom".to_string(), HayashiValue::Str("histogram".to_string()));
+        layer.insert(
+            "geom".to_string(),
+            HayashiValue::Str("histogram".to_string()),
+        );
         layer.insert("color".to_string(), HayashiValue::Str(color));
         layer.insert("bins".to_string(), HayashiValue::Int(bins));
         layers.push(HayashiValue::Dict(layer));
@@ -136,7 +139,7 @@ pub fn geom_histogram(
 pub fn geom_boxplot(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    width: f64
+    width: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -154,7 +157,7 @@ pub fn geom_boxplot(
 pub fn geom_heatmap(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    cell_size: f64
+    cell_size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -172,7 +175,7 @@ pub fn geom_heatmap(
 pub fn geom_area(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    size: f64
+    size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -191,7 +194,7 @@ pub fn geom_hline(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
     size: f64,
-    yintercept: f64
+    yintercept: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -211,7 +214,7 @@ pub fn geom_vline(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
     size: f64,
-    xintercept: f64
+    xintercept: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -232,7 +235,7 @@ pub fn geom_abline(
     color: String,
     size: f64,
     slope: f64,
-    intercept: f64
+    intercept: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -253,7 +256,7 @@ pub fn geom_step(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
     size: f64,
-    direction: String
+    direction: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -276,7 +279,7 @@ pub fn geom_smooth(
     color: String,
     size: f64,
     method: String,
-    se: bool
+    se: bool,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -298,7 +301,7 @@ pub fn geom_spline(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
     size: f64,
-    tension: f64
+    tension: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -321,7 +324,7 @@ pub fn geom_ribbon(
     color: String,
     size: f64,
     ymin_col: String,
-    ymax_col: String
+    ymax_col: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -342,7 +345,7 @@ pub fn geom_ribbon(
 pub fn geom_col(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    size: f64
+    size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -361,7 +364,7 @@ pub fn geom_col(
 pub fn geom_path(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    size: f64
+    size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -382,7 +385,7 @@ pub fn geom_jitter(
     color: String,
     size: f64,
     width: f64,
-    height: f64
+    height: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -404,7 +407,7 @@ pub fn geom_density(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
     size: f64,
-    bandwidth: f64
+    bandwidth: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -424,7 +427,7 @@ pub fn geom_density(
 pub fn geom_violin(
     mut plot: HashMap<String, HayashiValue>,
     color: String,
-    size: f64
+    size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -443,7 +446,7 @@ pub fn labs(
     mut plot: HashMap<String, HayashiValue>,
     title: String,
     x: String,
-    y: String
+    y: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut labs)) = plot.get_mut("labs") {
         labs.insert("title".to_string(), HayashiValue::Str(title));
@@ -456,9 +459,7 @@ pub fn labs(
 /// 15. scale_x_log10(plot)
 /// Sets the x-axis to logarithmic scale (base 10).
 #[hayashi_fn]
-pub fn scale_x_log10(
-    mut plot: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn scale_x_log10(mut plot: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
         scales.insert("x_log".to_string(), HayashiValue::Bool(true));
     }
@@ -468,9 +469,7 @@ pub fn scale_x_log10(
 /// 16. scale_y_log10(plot)
 /// Sets the y-axis to logarithmic scale (base 10).
 #[hayashi_fn]
-pub fn scale_y_log10(
-    mut plot: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn scale_y_log10(mut plot: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
         scales.insert("y_log".to_string(), HayashiValue::Bool(true));
     }
@@ -484,7 +483,7 @@ pub fn scale_y_log10(
 #[hayashi_fn]
 pub fn set_series_config(
     mut plot: HashMap<String, HayashiValue>,
-    configs: HashMap<String, HayashiValue>
+    configs: HashMap<String, HayashiValue>,
 ) -> HashMap<String, HayashiValue> {
     plot.insert("series_config".to_string(), HayashiValue::Dict(configs));
     plot
@@ -498,7 +497,7 @@ pub fn set_series_config(
 pub fn draw_element(
     mut plot: HashMap<String, HayashiValue>,
     element_type: String,
-    params: HashMap<String, HayashiValue>
+    params: HashMap<String, HayashiValue>,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -519,7 +518,7 @@ pub fn draw_element(
 pub fn show_legend(
     mut plot: HashMap<String, HayashiValue>,
     position: String,
-    location: String
+    location: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("show_legend".to_string(), HayashiValue::Bool(true));
@@ -542,13 +541,14 @@ pub fn show_legend(
 pub fn filter_data(
     df_hayashi: HayashiValue,
     col: String,
-    value: f64
+    value: f64,
 ) -> Result<HayashiValue, String> {
     // Import the DataFrame from HayashiValue
     let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_hayashi)
         .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
 
-    let struct_arr = df_arr.as_any()
+    let struct_arr = df_arr
+        .as_any()
         .downcast_ref::<StructArray>()
         .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
 
@@ -556,7 +556,8 @@ pub fn filter_data(
     let filter_values = extract_column_f64(struct_arr, &col)?;
 
     // Create a boolean mask for filtering
-    let mask: Vec<bool> = filter_values.iter()
+    let mask: Vec<bool> = filter_values
+        .iter()
         .map(|&v| !v.is_nan() && (v - value).abs() < 1e-9)
         .collect();
 
@@ -589,7 +590,7 @@ pub fn filter_data(
 pub fn set_dimensions(
     mut plot: HashMap<String, HayashiValue>,
     width: i64,
-    height: i64
+    height: i64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("width".to_string(), HayashiValue::Int(width));
@@ -606,7 +607,7 @@ pub fn set_margins(
     top: i64,
     bottom: i64,
     left: i64,
-    right: i64
+    right: i64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("margin_top".to_string(), HayashiValue::Int(top));
@@ -624,39 +625,51 @@ pub fn set_margins(
 #[hayashi_fn]
 pub fn set_margins_dict(
     mut plot: HashMap<String, HayashiValue>,
-    margins: HashMap<String, HayashiValue>
+    margins: HashMap<String, HayashiValue>,
 ) -> HashMap<String, HayashiValue> {
     // Default margin values
     let default_top = 60i64;
     let default_bottom = 60i64;
     let default_left = 60i64;
     let default_right = 20i64;
-    
+
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        let top = margins.get("top").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_top);
-        
-        let bottom = margins.get("bottom").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_bottom);
-        
-        let left = margins.get("left").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_left);
-        
-        let right = margins.get("right").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_right);
-        
+        let top = margins
+            .get("top")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_top);
+
+        let bottom = margins
+            .get("bottom")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_bottom);
+
+        let left = margins
+            .get("left")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_left);
+
+        let right = margins
+            .get("right")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_right);
+
         spec.insert("margin_top".to_string(), HayashiValue::Int(top));
         spec.insert("margin_bottom".to_string(), HayashiValue::Int(bottom));
         spec.insert("margin_left".to_string(), HayashiValue::Int(left));
@@ -674,7 +687,7 @@ pub fn set_padding(
     top: i64,
     bottom: i64,
     left: i64,
-    right: i64
+    right: i64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("padding_top".to_string(), HayashiValue::Int(top));
@@ -692,39 +705,51 @@ pub fn set_padding(
 #[hayashi_fn]
 pub fn set_padding_dict(
     mut plot: HashMap<String, HayashiValue>,
-    padding: HashMap<String, HayashiValue>
+    padding: HashMap<String, HayashiValue>,
 ) -> HashMap<String, HayashiValue> {
     // Default padding values
     let default_top = 10i64;
     let default_bottom = 10i64;
     let default_left = 10i64;
     let default_right = 10i64;
-    
+
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        let top = padding.get("top").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_top);
-        
-        let bottom = padding.get("bottom").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_bottom);
-        
-        let left = padding.get("left").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_left);
-        
-        let right = padding.get("right").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i),
-            HayashiValue::Float(f) => Some(*f as i64),
-            _ => None,
-        }).unwrap_or(default_right);
-        
+        let top = padding
+            .get("top")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_top);
+
+        let bottom = padding
+            .get("bottom")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_bottom);
+
+        let left = padding
+            .get("left")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_left);
+
+        let right = padding
+            .get("right")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i),
+                HayashiValue::Float(f) => Some(*f as i64),
+                _ => None,
+            })
+            .unwrap_or(default_right);
+
         spec.insert("padding_top".to_string(), HayashiValue::Int(top));
         spec.insert("padding_bottom".to_string(), HayashiValue::Int(bottom));
         spec.insert("padding_left".to_string(), HayashiValue::Int(left));
@@ -739,14 +764,14 @@ pub fn set_padding_dict(
 #[hayashi_fn]
 pub fn save_svg(
     plot: HashMap<String, HayashiValue>,
-    filename: String
+    filename: String,
 ) -> Result<HayashiValue, String> {
     let svg_content = render_svg_impl(plot)?;
-    
+
     // Write to file using std::fs
     std::fs::write(&filename, &svg_content)
         .map_err(|e| format!("Failed to write SVG to '{}': {}", filename, e))?;
-    
+
     Ok(HayashiValue::Str(svg_content))
 }
 
@@ -756,7 +781,7 @@ pub fn save_svg(
 #[hayashi_fn]
 pub fn set_background_color(
     mut plot: HashMap<String, HayashiValue>,
-    color: String
+    color: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("background_color".to_string(), HayashiValue::Str(color));
@@ -769,7 +794,7 @@ pub fn set_background_color(
 #[hayashi_fn]
 pub fn set_grid(
     mut plot: HashMap<String, HayashiValue>,
-    show_grid: bool
+    show_grid: bool,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
         spec.insert("show_grid".to_string(), HayashiValue::Bool(show_grid));
@@ -780,15 +805,22 @@ pub fn set_grid(
 /// 22b. theme_minimal(plot)
 /// Minimal theme: white background, gray grid, no axis lines.
 #[hayashi_fn]
-pub fn theme_minimal(
-    mut plot: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn theme_minimal(mut plot: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert(
+            "background_color".to_string(),
+            HayashiValue::Str("white".to_string()),
+        );
         spec.insert("show_grid".to_string(), HayashiValue::Bool(true));
         spec.insert("panel_border".to_string(), HayashiValue::Bool(false));
-        spec.insert("axis_line_color".to_string(), HayashiValue::Str("gray".to_string()));
-        spec.insert("grid_color".to_string(), HayashiValue::Str("#EEEEEE".to_string()));
+        spec.insert(
+            "axis_line_color".to_string(),
+            HayashiValue::Str("gray".to_string()),
+        );
+        spec.insert(
+            "grid_color".to_string(),
+            HayashiValue::Str("#EEEEEE".to_string()),
+        );
     }
     plot
 }
@@ -796,15 +828,22 @@ pub fn theme_minimal(
 /// 22c. theme_bw(plot)
 /// Black-and-white theme: white background, black grid, black axis lines.
 #[hayashi_fn]
-pub fn theme_bw(
-    mut plot: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn theme_bw(mut plot: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert(
+            "background_color".to_string(),
+            HayashiValue::Str("white".to_string()),
+        );
         spec.insert("show_grid".to_string(), HayashiValue::Bool(true));
         spec.insert("panel_border".to_string(), HayashiValue::Bool(true));
-        spec.insert("axis_line_color".to_string(), HayashiValue::Str("black".to_string()));
-        spec.insert("grid_color".to_string(), HayashiValue::Str("#CCCCCC".to_string()));
+        spec.insert(
+            "axis_line_color".to_string(),
+            HayashiValue::Str("black".to_string()),
+        );
+        spec.insert(
+            "grid_color".to_string(),
+            HayashiValue::Str("#CCCCCC".to_string()),
+        );
     }
     plot
 }
@@ -812,14 +851,18 @@ pub fn theme_bw(
 /// 22d. theme_classic(plot)
 /// Classic theme: white background, no grid, black axis lines only.
 #[hayashi_fn]
-pub fn theme_classic(
-    mut plot: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn theme_classic(mut plot: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert(
+            "background_color".to_string(),
+            HayashiValue::Str("white".to_string()),
+        );
         spec.insert("show_grid".to_string(), HayashiValue::Bool(false));
         spec.insert("panel_border".to_string(), HayashiValue::Bool(false));
-        spec.insert("axis_line_color".to_string(), HayashiValue::Str("black".to_string()));
+        spec.insert(
+            "axis_line_color".to_string(),
+            HayashiValue::Str("black".to_string()),
+        );
     }
     plot
 }
@@ -827,14 +870,18 @@ pub fn theme_classic(
 /// 22e. theme_void(plot)
 /// Void theme: white background, no grid, no axis lines, no labels.
 #[hayashi_fn]
-pub fn theme_void(
-    mut plot: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn theme_void(mut plot: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        spec.insert("background_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert(
+            "background_color".to_string(),
+            HayashiValue::Str("white".to_string()),
+        );
         spec.insert("show_grid".to_string(), HayashiValue::Bool(false));
         spec.insert("panel_border".to_string(), HayashiValue::Bool(false));
-        spec.insert("axis_line_color".to_string(), HayashiValue::Str("white".to_string()));
+        spec.insert(
+            "axis_line_color".to_string(),
+            HayashiValue::Str("white".to_string()),
+        );
         spec.insert("hide_axis_labels".to_string(), HayashiValue::Bool(true));
     }
     plot
@@ -843,9 +890,7 @@ pub fn theme_void(
 /// 24. coord_flip(plot)
 /// Flips the Cartesian coordinates, switching x and y axes.
 #[hayashi_fn]
-pub fn coord_flip(
-    mut plot: HashMap<String, HayashiValue>
-) -> HashMap<String, HayashiValue> {
+pub fn coord_flip(mut plot: HashMap<String, HayashiValue>) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut coords)) = plot.get_mut("coords") {
         coords.insert("flip".to_string(), HayashiValue::Bool(true));
     }
@@ -861,7 +906,7 @@ pub fn geom_text(
     x: f64,
     y: f64,
     color: String,
-    size: f64
+    size: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::List(ref mut layers)) = plot.get_mut("layers") {
         let mut layer = HashMap::new();
@@ -886,7 +931,7 @@ pub fn scale_x_continuous(
     mut plot: HashMap<String, HayashiValue>,
     limits: HayashiValue,
     breaks: HayashiValue,
-    labels: HayashiValue
+    labels: HayashiValue,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
         // Extract limits from list (handles both List and Arrow types)
@@ -907,7 +952,7 @@ pub fn scale_y_continuous(
     mut plot: HashMap<String, HayashiValue>,
     limits: HayashiValue,
     breaks: HayashiValue,
-    labels: HayashiValue
+    labels: HayashiValue,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
         if let Some((min, max)) = extract_limits_from_value(&limits) {
@@ -925,8 +970,16 @@ fn extract_limits_from_value(v: &HayashiValue) -> Option<(f64, f64)> {
     use hayashi_plugin_sdk::value::FromHayashi;
     match v {
         HayashiValue::List(l) if l.len() >= 2 => {
-            let min = match &l[0] { HayashiValue::Float(f) => *f, HayashiValue::Int(i) => *i as f64, _ => return None };
-            let max = match &l[1] { HayashiValue::Float(f) => *f, HayashiValue::Int(i) => *i as f64, _ => return None };
+            let min = match &l[0] {
+                HayashiValue::Float(f) => *f,
+                HayashiValue::Int(i) => *i as f64,
+                _ => return None,
+            };
+            let max = match &l[1] {
+                HayashiValue::Float(f) => *f,
+                HayashiValue::Int(i) => *i as f64,
+                _ => return None,
+            };
             Some((min, max))
         }
         HayashiValue::Arrow(_, _) => {
@@ -943,10 +996,20 @@ fn extract_f64_from_array(arr: &dyn Array, idx: usize) -> Option<f64> {
     use hayashi_plugin_sdk::arrow::array::Float64Array;
     use hayashi_plugin_sdk::arrow::array::Int64Array;
     if let Some(a) = arr.as_any().downcast_ref::<Float64Array>() {
-        if !a.is_null(idx) { Some(a.value(idx)) } else { None }
+        if !a.is_null(idx) {
+            Some(a.value(idx))
+        } else {
+            None
+        }
     } else if let Some(a) = arr.as_any().downcast_ref::<Int64Array>() {
-        if !a.is_null(idx) { Some(a.value(idx) as f64) } else { None }
-    } else { None }
+        if !a.is_null(idx) {
+            Some(a.value(idx) as f64)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }
 
 /// 27b. xlim(plot, min, max)
@@ -955,7 +1018,7 @@ fn extract_f64_from_array(arr: &dyn Array, idx: usize) -> Option<f64> {
 pub fn xlim(
     mut plot: HashMap<String, HayashiValue>,
     min: f64,
-    max: f64
+    max: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
         scales.insert("x_limit_min".to_string(), HayashiValue::Float(min));
@@ -975,7 +1038,7 @@ pub fn xlim(
 pub fn ylim(
     mut plot: HashMap<String, HayashiValue>,
     min: f64,
-    max: f64
+    max: f64,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut scales)) = plot.get_mut("scales") {
         scales.insert("y_limit_min".to_string(), HayashiValue::Float(min));
@@ -996,7 +1059,7 @@ pub fn theme_element_text(
     mut plot: HashMap<String, HayashiValue>,
     family: String,
     size: f64,
-    color: String
+    color: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut theme)) = plot.get_mut("theme") {
         let mut text = HashMap::new();
@@ -1017,16 +1080,22 @@ pub fn facet_wrap(
     mut plot: HashMap<String, HayashiValue>,
     facet_col: String,
     ncol: i64,
-    scales: String
+    scales: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        spec.insert("facet_type".to_string(), HayashiValue::Str("wrap".to_string()));
+        spec.insert(
+            "facet_type".to_string(),
+            HayashiValue::Str("wrap".to_string()),
+        );
         spec.insert("facet_col".to_string(), HayashiValue::Str(facet_col));
         spec.insert("facet_ncol".to_string(), HayashiValue::Int(ncol));
         spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
     } else {
         let mut spec = HashMap::new();
-        spec.insert("facet_type".to_string(), HayashiValue::Str("wrap".to_string()));
+        spec.insert(
+            "facet_type".to_string(),
+            HayashiValue::Str("wrap".to_string()),
+        );
         spec.insert("facet_col".to_string(), HayashiValue::Str(facet_col));
         spec.insert("facet_ncol".to_string(), HayashiValue::Int(ncol));
         spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
@@ -1044,16 +1113,22 @@ pub fn facet_grid(
     mut plot: HashMap<String, HayashiValue>,
     rows_col: String,
     cols_col: String,
-    scales: String
+    scales: String,
 ) -> HashMap<String, HayashiValue> {
     if let Some(HayashiValue::Dict(ref mut spec)) = plot.get_mut("spec") {
-        spec.insert("facet_type".to_string(), HayashiValue::Str("grid".to_string()));
+        spec.insert(
+            "facet_type".to_string(),
+            HayashiValue::Str("grid".to_string()),
+        );
         spec.insert("facet_rows".to_string(), HayashiValue::Str(rows_col));
         spec.insert("facet_cols".to_string(), HayashiValue::Str(cols_col));
         spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
     } else {
         let mut spec = HashMap::new();
-        spec.insert("facet_type".to_string(), HayashiValue::Str("grid".to_string()));
+        spec.insert(
+            "facet_type".to_string(),
+            HayashiValue::Str("grid".to_string()),
+        );
         spec.insert("facet_rows".to_string(), HayashiValue::Str(rows_col));
         spec.insert("facet_cols".to_string(), HayashiValue::Str(cols_col));
         spec.insert("facet_scales".to_string(), HayashiValue::Str(scales));
@@ -1069,18 +1144,20 @@ pub fn facet_grid(
 #[hayashi_fn]
 pub fn save_png(
     plot: HashMap<String, HayashiValue>,
-    filename: String
+    filename: String,
 ) -> Result<HayashiValue, String> {
-    use base64::{Engine as _, engine::general_purpose};
-    
+    use base64::{engine::general_purpose, Engine as _};
+
     let png_data = render_png_impl(plot)?;
-    
+
     // Write to file using std::fs
     std::fs::write(&filename, &png_data)
         .map_err(|e| format!("Failed to write PNG to '{}': {}", filename, e))?;
-    
+
     // Return base64-encoded string for potential use
-    Ok(HayashiValue::Str(general_purpose::STANDARD.encode(&png_data)))
+    Ok(HayashiValue::Str(
+        general_purpose::STANDARD.encode(&png_data),
+    ))
 }
 
 #[cfg(feature = "png")]
@@ -1088,202 +1165,282 @@ pub fn save_png(
 /// Note: Simplified implementation supporting basic geometries (point, line, bar, area)
 fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, String> {
     use plotters::prelude::*;
-    
+
     // Extract data from plot (same approach as render_svg)
-    let df_val = plot.get("data")
+    let df_val = plot
+        .get("data")
         .ok_or_else(|| "No data in plot specification".to_string())?;
-    
+
     let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_val.clone())
         .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
-        
-    let struct_arr = df_arr.as_any()
+
+    let struct_arr = df_arr
+        .as_any()
         .downcast_ref::<StructArray>()
         .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
-        
+
     // Get aesthetic mapping
-    let mapping_val = plot.get("mapping")
+    let mapping_val = plot
+        .get("mapping")
         .ok_or_else(|| "No mapping in plot specification".to_string())?;
     let mapping = match mapping_val {
         HayashiValue::Dict(m) => m,
         _ => return Err("Mapping must be a Dictionary".to_string()),
     };
-    
-    let x_col_val = mapping.get("x")
+
+    let x_col_val = mapping
+        .get("x")
         .ok_or_else(|| "Mapping must contain 'x'".to_string())?;
-    let y_col_val = mapping.get("y")
+    let y_col_val = mapping
+        .get("y")
         .ok_or_else(|| "Mapping must contain 'y'".to_string())?;
-        
+
     let x_col = match x_col_val {
         HayashiValue::Str(s) => s.as_str(),
         _ => return Err("x must be a string".to_string()),
     };
-    
+
     let y_col = match y_col_val {
         HayashiValue::Str(s) => s.as_str(),
         _ => return Err("y must be a string".to_string()),
     };
-    
+
     let x_values = extract_column_f64(struct_arr, x_col)?;
     let y_values = extract_column_f64(struct_arr, y_col)?;
-    
+
     // Extract metadata
-    let title = plot.get("title")
+    let title = plot
+        .get("title")
         .and_then(|v| match v {
             HayashiValue::Str(s) => Some(s.as_str()),
             _ => None,
         })
         .unwrap_or("Plot");
-    
-    let x_label = plot.get("x_label")
+
+    let x_label = plot
+        .get("x_label")
         .and_then(|v| match v {
             HayashiValue::Str(s) => Some(s.as_str()),
             _ => None,
         })
         .unwrap_or("X");
-    
-    let y_label = plot.get("y_label")
+
+    let y_label = plot
+        .get("y_label")
         .and_then(|v| match v {
             HayashiValue::Str(s) => Some(s.as_str()),
             _ => None,
         })
         .unwrap_or("Y");
-    
+
     // Check for log scales
-    let log_x = plot.get("log_x")
+    let log_x = plot
+        .get("log_x")
         .and_then(|v| match v {
             HayashiValue::Bool(b) => Some(*b),
             _ => None,
         })
         .unwrap_or(false);
-    
-    let log_y = plot.get("log_y")
+
+    let log_y = plot
+        .get("log_y")
         .and_then(|v| match v {
             HayashiValue::Bool(b) => Some(*b),
             _ => None,
         })
         .unwrap_or(false);
-    
+
     // Transform coordinates if log scale is enabled
     let x_values = if log_x {
-        x_values.iter().map(|&v| if v > 0.0 { v.log10() } else { f64::NAN }).collect()
+        x_values
+            .iter()
+            .map(|&v| if v > 0.0 { v.log10() } else { f64::NAN })
+            .collect()
     } else {
         x_values
     };
-    
+
     let y_values = if log_y {
-        y_values.iter().map(|&v| if v > 0.0 { v.log10() } else { f64::NAN }).collect()
+        y_values
+            .iter()
+            .map(|&v| if v > 0.0 { v.log10() } else { f64::NAN })
+            .collect()
     } else {
         y_values
     };
-    
+
     // Compute range limits
-    let x_min = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
-    let x_max = x_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    let y_min = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
-    let y_max = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    
+    let x_min = x_values
+        .iter()
+        .filter(|&&v| !v.is_nan())
+        .fold(f64::INFINITY, |a, &b| a.min(b));
+    let x_max = x_values
+        .iter()
+        .filter(|&&v| !v.is_nan())
+        .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let y_min = y_values
+        .iter()
+        .filter(|&&v| !v.is_nan())
+        .fold(f64::INFINITY, |a, &b| a.min(b));
+    let y_max = y_values
+        .iter()
+        .filter(|&&v| !v.is_nan())
+        .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+
     // Handle empty or constant coordinate boundaries
-    let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.05 };
-    let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
-    let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
-    let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
-    
+    let x_min = if x_min.is_infinite() {
+        0.0
+    } else {
+        x_min - (x_max - x_min).abs() * 0.05
+    };
+    let x_max = if x_max.is_infinite() {
+        10.0
+    } else {
+        x_max + (x_max - x_min).abs() * 0.05
+    };
+    let y_min = if y_min.is_infinite() {
+        0.0
+    } else {
+        y_min - (y_max - y_min).abs() * 0.05
+    };
+    let y_max = if y_max.is_infinite() {
+        10.0
+    } else {
+        y_max + (y_max - y_min).abs() * 0.05
+    };
+
     // Get dimensions from spec or use defaults
     let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        let w = spec.get("width").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(800);
-        let h = spec.get("height").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(600);
+        let w = spec
+            .get("width")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i as u32),
+                _ => None,
+            })
+            .unwrap_or(800);
+        let h = spec
+            .get("height")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i as u32),
+                _ => None,
+            })
+            .unwrap_or(600);
         (w, h)
     } else {
         (800, 600)
     };
-    
+
     // Get margins from spec or use defaults
     // Default margins: top=60 (title area), bottom=60 (x-axis labels), left=60 (y-axis labels), right=20
-    let (margin_top, margin_bottom, margin_left, margin_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        let mt = spec.get("margin_top").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(60);
-        let mb = spec.get("margin_bottom").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(60);
-        let ml = spec.get("margin_left").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(60);
-        let mr = spec.get("margin_right").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(20);
-        (mt, mb, ml, mr)
-    } else {
-        (60, 60, 60, 20)
-    };
-    
+    let (margin_top, margin_bottom, margin_left, margin_right) =
+        if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+            let mt = spec
+                .get("margin_top")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(60);
+            let mb = spec
+                .get("margin_bottom")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(60);
+            let ml = spec
+                .get("margin_left")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(60);
+            let mr = spec
+                .get("margin_right")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(20);
+            (mt, mb, ml, mr)
+        } else {
+            (60, 60, 60, 20)
+        };
+
     // Get padding from spec or use defaults
     // Default padding: top=10, bottom=10, left=10, right=10 (internal spacing within plot area)
-    let (padding_top, padding_bottom, padding_left, padding_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        let pt = spec.get("padding_top").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        let pb = spec.get("padding_bottom").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        let pl = spec.get("padding_left").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        let pr = spec.get("padding_right").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        (pt, pb, pl, pr)
-    } else {
-        (10.0, 10.0, 10.0, 10.0)
-    };
-    
+    let (padding_top, padding_bottom, padding_left, padding_right) =
+        if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+            let pt = spec
+                .get("padding_top")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            let pb = spec
+                .get("padding_bottom")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            let pl = spec
+                .get("padding_left")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            let pr = spec
+                .get("padding_right")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            (pt, pb, pl, pr)
+        } else {
+            (10.0, 10.0, 10.0, 10.0)
+        };
+
     // Get background color from spec or use default (white)
     let background_color_name = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        spec.get("background_color").and_then(|v| match v {
-            HayashiValue::Str(s) => Some(s.clone()),
-            _ => None,
-        }).unwrap_or_else(|| "white".to_string())
+        spec.get("background_color")
+            .and_then(|v| match v {
+                HayashiValue::Str(s) => Some(s.clone()),
+                _ => None,
+            })
+            .unwrap_or_else(|| "white".to_string())
     } else {
         "white".to_string()
     };
-    
+
     // Get grid setting from spec or use default (true)
     let show_grid = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        spec.get("show_grid").and_then(|v| match v {
-            HayashiValue::Bool(b) => Some(*b),
-            _ => None,
-        }).unwrap_or(true)
+        spec.get("show_grid")
+            .and_then(|v| match v {
+                HayashiValue::Bool(b) => Some(*b),
+                _ => None,
+            })
+            .unwrap_or(true)
     } else {
         true
     };
-    
+
     // Render plot into an in-memory PNG buffer
     let mut png_buffer = Vec::new();
     {
         let root = BitMapBackend::with_buffer(&mut png_buffer, (width, height)).into_drawing_area();
-        
+
         // Parse and apply background color (convert to RGBColor)
         let bg_rgb = parse_color_to_rgb(&background_color_name);
         root.fill(&bg_rgb).map_err(|e| e.to_string())?;
-        
+
         // Apply padding to axis ranges (internal spacing within plot area)
         let plot_width = width as f64 - margin_left as f64 - margin_right as f64;
         let plot_height = height as f64 - margin_top as f64 - margin_bottom as f64;
@@ -1295,7 +1452,7 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
         let x_max = x_max - padding_right * x_units_per_pixel;
         let y_min = y_min + padding_bottom * y_units_per_pixel;
         let y_max = y_max - padding_top * y_units_per_pixel;
-        
+
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
             .margin_top(margin_top)
@@ -1306,15 +1463,17 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
             .y_label_area_size(40)
             .build_cartesian_2d(x_min..x_max, y_min..y_max)
             .map_err(|e| e.to_string())?;
-        
+
         if show_grid {
-            chart.configure_mesh()
+            chart
+                .configure_mesh()
                 .x_desc(x_label)
                 .y_desc(y_label)
                 .draw()
                 .map_err(|e| e.to_string())?;
         } else {
-            chart.configure_mesh()
+            chart
+                .configure_mesh()
                 .x_desc(x_label)
                 .y_desc(y_label)
                 .disable_x_mesh()
@@ -1322,7 +1481,7 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
                 .draw()
                 .map_err(|e| e.to_string())?;
         }
-        
+
         // Draw layers sequentially (basic geometries only for PNG)
         if let Some(HayashiValue::List(layers)) = plot.get("layers") {
             for layer_val in layers {
@@ -1333,57 +1492,84 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
                             _ => "blue",
                         };
                         let color = parse_color(color_name);
-                        
+
                         match geom.as_str() {
                             "point" => {
-                                let size = layer.get("size").and_then(|v| match v {
-                                    HayashiValue::Float(f) => Some(*f),
-                                    _ => None,
-                                }).unwrap_or(5.0);
-                                
-                                chart.draw_series(x_values.iter().zip(y_values.iter()).map(|(&x, &y)| {
-                                    Circle::new((x, y), size, color.filled())
-                                })).map_err(|e| e.to_string())?;
+                                let size = layer
+                                    .get("size")
+                                    .and_then(|v| match v {
+                                        HayashiValue::Float(f) => Some(*f),
+                                        _ => None,
+                                    })
+                                    .unwrap_or(5.0);
+
+                                chart
+                                    .draw_series(
+                                        x_values.iter().zip(y_values.iter()).map(|(&x, &y)| {
+                                            Circle::new((x, y), size, color.filled())
+                                        }),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             }
                             "line" => {
-                                let size = layer.get("size").and_then(|v| match v {
-                                    HayashiValue::Float(f) => Some(*f),
-                                    _ => None,
-                                }).unwrap_or(2.0);
-                                
-                                chart.draw_series(LineSeries::new(
-                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
-                                    color.stroke_width(size as u32)
-                                )).map_err(|e| e.to_string())?;
+                                let size = layer
+                                    .get("size")
+                                    .and_then(|v| match v {
+                                        HayashiValue::Float(f) => Some(*f),
+                                        _ => None,
+                                    })
+                                    .unwrap_or(2.0);
+
+                                chart
+                                    .draw_series(LineSeries::new(
+                                        x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
+                                        color.stroke_width(size as u32),
+                                    ))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "bar" => {
-                                let width = layer.get("width").and_then(|v| match v {
-                                    HayashiValue::Float(f) => Some(*f),
-                                    _ => None,
-                                }).unwrap_or(0.5);
-                                
-                                chart.draw_series(
-                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| {
-                                        Rectangle::new([(x - width/2.0, 0.0), (x + width/2.0, y)], color.filled())
+                                let width = layer
+                                    .get("width")
+                                    .and_then(|v| match v {
+                                        HayashiValue::Float(f) => Some(*f),
+                                        _ => None,
                                     })
-                                ).map_err(|e| e.to_string())?;
+                                    .unwrap_or(0.5);
+
+                                chart
+                                    .draw_series(x_values.iter().zip(y_values.iter()).map(
+                                        |(&x, &y)| {
+                                            Rectangle::new(
+                                                [(x - width / 2.0, 0.0), (x + width / 2.0, y)],
+                                                color.filled(),
+                                            )
+                                        },
+                                    ))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "area" => {
-                                let size = layer.get("size").and_then(|v| match v {
-                                    HayashiValue::Float(f) => Some(*f),
-                                    _ => None,
-                                }).unwrap_or(2.0);
-                                
-                                chart.draw_series(AreaSeries::new(
-                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
-                                    0.0,
-                                    color.filled()
-                                )).map_err(|e| e.to_string())?;
-                                
-                                chart.draw_series(LineSeries::new(
-                                    x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
-                                    color.stroke_width(size as u32)
-                                )).map_err(|e| e.to_string())?;
+                                let size = layer
+                                    .get("size")
+                                    .and_then(|v| match v {
+                                        HayashiValue::Float(f) => Some(*f),
+                                        _ => None,
+                                    })
+                                    .unwrap_or(2.0);
+
+                                chart
+                                    .draw_series(AreaSeries::new(
+                                        x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
+                                        0.0,
+                                        color.filled(),
+                                    ))
+                                    .map_err(|e| e.to_string())?;
+
+                                chart
+                                    .draw_series(LineSeries::new(
+                                        x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
+                                        color.stroke_width(size as u32),
+                                    ))
+                                    .map_err(|e| e.to_string())?;
                             }
                             _ => {
                                 // Other geometries not yet supported in PNG backend
@@ -1395,7 +1581,7 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
             }
         }
     }
-    
+
     Ok(png_buffer)
 }
 
@@ -1433,11 +1619,13 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
     };
 
     // Get DataFrame
-    let df_val = plot.get("data")
+    let df_val = plot
+        .get("data")
         .ok_or_else(|| "No data in faceted plot".to_string())?;
     let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_val.clone())
         .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
-    let struct_arr = df_arr.as_any()
+    let struct_arr = df_arr
+        .as_any()
         .downcast_ref::<StructArray>()
         .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
 
@@ -1456,50 +1644,71 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
     };
 
     // Get labs
-    let title = plot.get("labs").and_then(|l| match l {
-        HayashiValue::Dict(d) => d.get("title").and_then(|v| match v {
-            HayashiValue::Str(s) => Some(s.clone()),
+    let title = plot
+        .get("labs")
+        .and_then(|l| match l {
+            HayashiValue::Dict(d) => d.get("title").and_then(|v| match v {
+                HayashiValue::Str(s) => Some(s.clone()),
+                _ => None,
+            }),
             _ => None,
-        }),
-        _ => None,
-    }).unwrap_or_default();
-    let x_label = plot.get("labs").and_then(|l| match l {
-        HayashiValue::Dict(d) => d.get("x").and_then(|v| match v {
-            HayashiValue::Str(s) => Some(s.clone()),
+        })
+        .unwrap_or_default();
+    let x_label = plot
+        .get("labs")
+        .and_then(|l| match l {
+            HayashiValue::Dict(d) => d.get("x").and_then(|v| match v {
+                HayashiValue::Str(s) => Some(s.clone()),
+                _ => None,
+            }),
             _ => None,
-        }),
-        _ => None,
-    }).unwrap_or_else(|| x_col.clone());
-    let y_label = plot.get("labs").and_then(|l| match l {
-        HayashiValue::Dict(d) => d.get("y").and_then(|v| match v {
-            HayashiValue::Str(s) => Some(s.clone()),
+        })
+        .unwrap_or_else(|| x_col.clone());
+    let y_label = plot
+        .get("labs")
+        .and_then(|l| match l {
+            HayashiValue::Dict(d) => d.get("y").and_then(|v| match v {
+                HayashiValue::Str(s) => Some(s.clone()),
+                _ => None,
+            }),
             _ => None,
-        }),
-        _ => None,
-    }).unwrap_or_else(|| y_col.clone());
+        })
+        .unwrap_or_else(|| y_col.clone());
 
     // Dimensions
     let (width, height) = {
-        let w = spec.get("width").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(800);
-        let h = spec.get("height").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(600);
+        let w = spec
+            .get("width")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i as u32),
+                _ => None,
+            })
+            .unwrap_or(800);
+        let h = spec
+            .get("height")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i as u32),
+                _ => None,
+            })
+            .unwrap_or(600);
         (w, h)
     };
 
-    let bg_color = spec.get("background_color").and_then(|v| match v {
-        HayashiValue::Str(s) => Some(s.clone()),
-        _ => None,
-    }).unwrap_or_else(|| "white".to_string());
+    let bg_color = spec
+        .get("background_color")
+        .and_then(|v| match v {
+            HayashiValue::Str(s) => Some(s.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| "white".to_string());
 
-    let show_grid = spec.get("show_grid").and_then(|v| match v {
-        HayashiValue::Bool(b) => Some(*b),
-        _ => None,
-    }).unwrap_or(true);
+    let show_grid = spec
+        .get("show_grid")
+        .and_then(|v| match v {
+            HayashiValue::Bool(b) => Some(*b),
+            _ => None,
+        })
+        .unwrap_or(true);
 
     // Determine facet groups
     let (panel_labels, n_rows, n_cols, _row_labels, _col_labels) = if facet_type == "wrap" {
@@ -1507,10 +1716,13 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
             Some(HayashiValue::Str(s)) => s.clone(),
             _ => return Err("facet_wrap requires facet_col".to_string()),
         };
-        let ncol = spec.get("facet_ncol").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as usize),
-            _ => None,
-        }).unwrap_or(2);
+        let ncol = spec
+            .get("facet_ncol")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i as usize),
+                _ => None,
+            })
+            .unwrap_or(2);
 
         let facet_values = extract_column_string(struct_arr, &facet_col)?;
         let groups = unique_strings(&facet_values);
@@ -1597,7 +1809,9 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
             };
             let row_values = extract_column_string(struct_arr, rows_col)?;
             let col_values = extract_column_string(struct_arr, cols_col)?;
-            row_values.iter().zip(col_values.iter())
+            row_values
+                .iter()
+                .zip(col_values.iter())
                 .map(|(r, c)| r == parts[0] && c == parts[1])
                 .collect()
         };
@@ -1623,49 +1837,98 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
 
     // Global ranges
     let (global_x_min, global_x_max, global_y_min, global_y_max) = {
-        let x_min = panels.iter()
+        let x_min = panels
+            .iter()
             .flat_map(|p| p.x_values.iter().flat_map(|s| s.iter()))
             .filter(|&&v| !v.is_nan())
             .fold(f64::INFINITY, |a, &b| a.min(b));
-        let x_max = panels.iter()
+        let x_max = panels
+            .iter()
             .flat_map(|p| p.x_values.iter().flat_map(|s| s.iter()))
             .filter(|&&v| !v.is_nan())
             .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let y_min = panels.iter()
+        let y_min = panels
+            .iter()
             .flat_map(|p| p.y_values.iter())
             .filter(|&&v| !v.is_nan())
             .fold(f64::INFINITY, |a, &b| a.min(b));
-        let y_max = panels.iter()
+        let y_max = panels
+            .iter()
             .flat_map(|p| p.y_values.iter())
             .filter(|&&v| !v.is_nan())
             .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
-        let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.05 };
-        let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
-        let y_min = if y_min.is_infinite() { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
-        let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
+        let x_min = if x_min.is_infinite() {
+            0.0
+        } else {
+            x_min - (x_max - x_min).abs() * 0.05
+        };
+        let x_max = if x_max.is_infinite() {
+            10.0
+        } else {
+            x_max + (x_max - x_min).abs() * 0.05
+        };
+        let y_min = if y_min.is_infinite() {
+            0.0
+        } else {
+            y_min - (y_max - y_min).abs() * 0.05
+        };
+        let y_max = if y_max.is_infinite() {
+            10.0
+        } else {
+            y_max + (y_max - y_min).abs() * 0.05
+        };
 
         // Apply manual scale limits if specified
         let (x_min, x_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-            let min = scales.get("x_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
-            let max = scales.get("x_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
-            match (min, max) { (Some(mn), Some(mx)) => (mn, mx), _ => (x_min, x_max) }
-        } else { (x_min, x_max) };
+            let min = scales.get("x_limit_min").and_then(|v| match v {
+                HayashiValue::Float(f) => Some(*f),
+                HayashiValue::Int(i) => Some(*i as f64),
+                _ => None,
+            });
+            let max = scales.get("x_limit_max").and_then(|v| match v {
+                HayashiValue::Float(f) => Some(*f),
+                HayashiValue::Int(i) => Some(*i as f64),
+                _ => None,
+            });
+            match (min, max) {
+                (Some(mn), Some(mx)) => (mn, mx),
+                _ => (x_min, x_max),
+            }
+        } else {
+            (x_min, x_max)
+        };
         let (y_min, y_max) = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-            let min = scales.get("y_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
-            let max = scales.get("y_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None });
-            match (min, max) { (Some(mn), Some(mx)) => (mn, mx), _ => (y_min, y_max) }
-        } else { (y_min, y_max) };
+            let min = scales.get("y_limit_min").and_then(|v| match v {
+                HayashiValue::Float(f) => Some(*f),
+                HayashiValue::Int(i) => Some(*i as f64),
+                _ => None,
+            });
+            let max = scales.get("y_limit_max").and_then(|v| match v {
+                HayashiValue::Float(f) => Some(*f),
+                HayashiValue::Int(i) => Some(*i as f64),
+                _ => None,
+            });
+            match (min, max) {
+                (Some(mn), Some(mx)) => (mn, mx),
+                _ => (y_min, y_max),
+            }
+        } else {
+            (y_min, y_max)
+        };
 
         (x_min, x_max, y_min, y_max)
     };
 
     // Get layers
     let layers: Vec<HashMap<String, HayashiValue>> = match plot.get("layers") {
-        Some(HayashiValue::List(l)) => l.iter().filter_map(|v| match v {
-            HayashiValue::Dict(d) => Some(d.clone()),
-            _ => None,
-        }).collect(),
+        Some(HayashiValue::List(l)) => l
+            .iter()
+            .filter_map(|v| match v {
+                HayashiValue::Dict(d) => Some(d.clone()),
+                _ => None,
+            })
+            .collect(),
         _ => Vec::new(),
     };
 
@@ -1697,7 +1960,8 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
             // Split off title area (40px)
             let (title_da, plot_da) = title_area.split_vertically(40);
             // Draw title
-            title_da.titled(&title, ("sans-serif", 20).into_font())
+            title_da
+                .titled(&title, ("sans-serif", 20).into_font())
                 .map_err(|e| e.to_string())?;
             plot_da
         } else {
@@ -1715,30 +1979,54 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
 
             // Determine ranges for this panel
             let (x_min, x_max) = if free_x {
-                let xmin = panel.x_values.iter()
+                let xmin = panel
+                    .x_values
+                    .iter()
                     .flat_map(|s| s.iter())
                     .filter(|&&v| !v.is_nan())
                     .fold(f64::INFINITY, |a, &b| a.min(b));
-                let xmax = panel.x_values.iter()
+                let xmax = panel
+                    .x_values
+                    .iter()
                     .flat_map(|s| s.iter())
                     .filter(|&&v| !v.is_nan())
                     .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-                let xmin = if xmin.is_infinite() { 0.0 } else { xmin - (xmax - xmin).abs() * 0.05 };
-                let xmax = if xmax.is_infinite() { 10.0 } else { xmax + (xmax - xmin).abs() * 0.05 };
+                let xmin = if xmin.is_infinite() {
+                    0.0
+                } else {
+                    xmin - (xmax - xmin).abs() * 0.05
+                };
+                let xmax = if xmax.is_infinite() {
+                    10.0
+                } else {
+                    xmax + (xmax - xmin).abs() * 0.05
+                };
                 (xmin, xmax)
             } else {
                 (global_x_min, global_x_max)
             };
 
             let (y_min, y_max) = if free_y {
-                let ymin = panel.y_values.iter()
+                let ymin = panel
+                    .y_values
+                    .iter()
                     .filter(|&&v| !v.is_nan())
                     .fold(f64::INFINITY, |a, &b| a.min(b));
-                let ymax = panel.y_values.iter()
+                let ymax = panel
+                    .y_values
+                    .iter()
                     .filter(|&&v| !v.is_nan())
                     .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-                let ymin = if ymin.is_infinite() { 0.0 } else { ymin - (ymax - ymin).abs() * 0.05 };
-                let ymax = if ymax.is_infinite() { 10.0 } else { ymax + (ymax - ymin).abs() * 0.05 };
+                let ymin = if ymin.is_infinite() {
+                    0.0
+                } else {
+                    ymin - (ymax - ymin).abs() * 0.05
+                };
+                let ymax = if ymax.is_infinite() {
+                    10.0
+                } else {
+                    ymax + (ymax - ymin).abs() * 0.05
+                };
                 (ymin, ymax)
             } else {
                 (global_y_min, global_y_max)
@@ -1759,14 +2047,16 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                 .map_err(|e| e.to_string())?;
 
             if show_grid {
-                chart.configure_mesh()
+                chart
+                    .configure_mesh()
                     .x_desc(&x_label)
                     .y_desc(&y_label)
                     .label_style(("sans-serif", 10).into_font())
                     .draw()
                     .map_err(|e| e.to_string())?;
             } else {
-                chart.configure_mesh()
+                chart
+                    .configure_mesh()
                     .x_desc(&x_label)
                     .y_desc(&y_label)
                     .label_style(("sans-serif", 10).into_font())
@@ -1805,22 +2095,38 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                                         } else {
                                             get_series_color(i).filled()
                                         }
-                                    } else { get_series_color(i).filled() }
-                                } else { get_series_color(i).filled() };
-                                chart.draw_series(
-                                    x_vals.iter().zip(panel.y_values.iter())
-                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                        .map(|(&x, &y)| Circle::new((x, y), size as i32, color))
-                                ).map_err(|e| e.to_string())?;
+                                    } else {
+                                        get_series_color(i).filled()
+                                    }
+                                } else {
+                                    get_series_color(i).filled()
+                                };
+                                chart
+                                    .draw_series(
+                                        x_vals
+                                            .iter()
+                                            .zip(panel.y_values.iter())
+                                            .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                            .map(|(&x, &y)| {
+                                                Circle::new((x, y), size as i32, color)
+                                            }),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             }
                         } else {
                             let style = parse_color(color_name);
                             for x_vals in &panel.x_values {
-                                chart.draw_series(
-                                    x_vals.iter().zip(panel.y_values.iter())
-                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                        .map(|(&x, &y)| Circle::new((x, y), size as i32, style))
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(
+                                        x_vals
+                                            .iter()
+                                            .zip(panel.y_values.iter())
+                                            .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                            .map(|(&x, &y)| {
+                                                Circle::new((x, y), size as i32, style)
+                                            }),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             }
                         }
                     }
@@ -1836,39 +2142,56 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                                         } else {
                                             get_series_color(i).stroke_width(size as u32)
                                         }
-                                    } else { get_series_color(i).stroke_width(size as u32) }
-                                } else { get_series_color(i).stroke_width(size as u32) };
-                                let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(panel.y_values.iter())
-                                    .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
-                                    .map(|(&x,&y)| (x,y)).collect();
+                                    } else {
+                                        get_series_color(i).stroke_width(size as u32)
+                                    }
+                                } else {
+                                    get_series_color(i).stroke_width(size as u32)
+                                };
+                                let mut pts: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(panel.y_values.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
                                 pts.sort_by(|a, b| a.0.total_cmp(&b.0));
-                                chart.draw_series(
-                                    LineSeries::new(pts.into_iter(), color)
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(LineSeries::new(pts.into_iter(), color))
+                                    .map_err(|e| e.to_string())?;
                             }
                         } else {
                             let style = parse_color(color_name).stroke_width(size as u32);
                             for x_vals in &panel.x_values {
-                                let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(panel.y_values.iter())
-                                    .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
-                                    .map(|(&x,&y)| (x,y)).collect();
+                                let mut pts: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(panel.y_values.iter())
+                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
                                 pts.sort_by(|a, b| a.0.total_cmp(&b.0));
-                                chart.draw_series(
-                                    LineSeries::new(pts.into_iter(), style)
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(LineSeries::new(pts.into_iter(), style))
+                                    .map_err(|e| e.to_string())?;
                             }
                         }
                     }
                     "bar" => {
                         let style = parse_color(color_name);
                         for x_vals in &panel.x_values {
-                            chart.draw_series(
-                                x_vals.iter().zip(panel.y_values.iter())
-                                    .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
-                                    .map(|(&x,&y)| {
-                                        Rectangle::new([(x - size/2.0, 0.0), (x + size/2.0, y)], style)
-                                    })
-                            ).map_err(|e| e.to_string())?;
+                            chart
+                                .draw_series(
+                                    x_vals
+                                        .iter()
+                                        .zip(panel.y_values.iter())
+                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                        .map(|(&x, &y)| {
+                                            Rectangle::new(
+                                                [(x - size / 2.0, 0.0), (x + size / 2.0, y)],
+                                                style,
+                                            )
+                                        }),
+                                )
+                                .map_err(|e| e.to_string())?;
                         }
                     }
                     _ => {} // skip unsupported geoms in facets for now
@@ -1907,29 +2230,34 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     }
 
     // 1. Get DataFrame from plot spec
-    let df_val = plot.get("data")
+    let df_val = plot
+        .get("data")
         .ok_or_else(|| "No data in plot specification".to_string())?;
-    
+
     let df_arr = <ArrayRef as FromHayashi>::from_hayashi(df_val.clone())
         .map_err(|e| format!("Failed to import Arrow DataFrame: {:?}", e))?;
-        
-    let struct_arr = df_arr.as_any()
+
+    let struct_arr = df_arr
+        .as_any()
         .downcast_ref::<StructArray>()
         .ok_or_else(|| "DataFrame must be an Arrow StructArray".to_string())?;
-        
+
     // 2. Get aesthetic mapping
-    let mapping_val = plot.get("mapping")
+    let mapping_val = plot
+        .get("mapping")
         .ok_or_else(|| "No mapping in plot specification".to_string())?;
     let mapping = match mapping_val {
         HayashiValue::Dict(m) => m,
         _ => return Err("Mapping must be a Dictionary".to_string()),
     };
-    
-    let x_col_val = mapping.get("x")
+
+    let x_col_val = mapping
+        .get("x")
         .ok_or_else(|| "Mapping must contain 'x'".to_string())?;
-    let y_col_val = mapping.get("y")
+    let y_col_val = mapping
+        .get("y")
         .ok_or_else(|| "Mapping must contain 'y'".to_string())?;
-        
+
     // Check if x is a list (multiple series) or single string
     // Hayashi doesn't support lists in dicts, so we use comma-separated string
     let x_series: Vec<String> = match x_col_val {
@@ -1953,14 +2281,18 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             }
             cols
         }
-        _ => return Err("'x' mapping must be a String (use 'x1,x2' for multiple series)".to_string()),
+        _ => {
+            return Err(
+                "'x' mapping must be a String (use 'x1,x2' for multiple series)".to_string(),
+            )
+        }
     };
-    
+
     let y_col_name = match y_col_val {
         HayashiValue::Str(s) => s,
         _ => return Err("'y' mapping must be a String".to_string()),
     };
-    
+
     // 3. Extract data values - extract multiple x series and single y
     let mut x_series_values: Vec<Vec<f64>> = vec![];
     for x_col in &x_series {
@@ -1977,7 +2309,11 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
     // 4. Resolve labels and scales
     let mut title = "".to_string();
-    let mut x_label = if x_series.len() == 1 { x_series[0].clone() } else { "Multiple series".to_string() };
+    let mut x_label = if x_series.len() == 1 {
+        x_series[0].clone()
+    } else {
+        "Multiple series".to_string()
+    };
     let mut y_label = y_col_name.clone();
     let mut x_log = false;
     let mut y_log = false;
@@ -2005,16 +2341,19 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
     // 5. Check for coord_flip
     let coord_flip = if let Some(HayashiValue::Dict(coords)) = plot.get("coords") {
-        coords.get("flip").and_then(|v| match v {
-            HayashiValue::Bool(b) => Some(*b),
-            _ => None,
-        }).unwrap_or(false)
+        coords
+            .get("flip")
+            .and_then(|v| match v {
+                HayashiValue::Bool(b) => Some(*b),
+                _ => None,
+            })
+            .unwrap_or(false)
     } else {
         false
     };
 
     // 5.5. Extract series config if provided
-    let series_config: Option<HashMap<String, HashMap<String, HayashiValue>>> = 
+    let series_config: Option<HashMap<String, HashMap<String, HayashiValue>>> =
         plot.get("series_config").and_then(|v| match v {
             HayashiValue::Dict(d) => {
                 let mut configs = HashMap::new();
@@ -2040,12 +2379,13 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
     // Extract the grouping column values and map unique values to palette indices
     let aes_groups: Option<(Vec<String>, Vec<usize>)> = if let Some(ref col) = aes_color_col {
-        let group_values = extract_column_string(struct_arr, col)
-            .map_err(|e| format!("aes_color: {}", e))?;
+        let group_values =
+            extract_column_string(struct_arr, col).map_err(|e| format!("aes_color: {}", e))?;
         let unique = unique_strings(&group_values);
-        let indices: Vec<usize> = group_values.iter().map(|v| {
-            unique.iter().position(|u| u == v).unwrap_or(0)
-        }).collect();
+        let indices: Vec<usize> = group_values
+            .iter()
+            .map(|v| unique.iter().position(|u| u == v).unwrap_or(0))
+            .collect();
         Some((unique, indices))
     } else {
         None
@@ -2058,22 +2398,48 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         if x_series_values.len() > 1 {
             return Err("coord_flip not supported for multiple x series".to_string());
         }
-        (vec![y_values.clone()], x_series_values[0].clone(), y_label, x_label)
+        (
+            vec![y_values.clone()],
+            x_series_values[0].clone(),
+            y_label,
+            x_label,
+        )
     } else {
         (x_series_values, y_values, x_label, y_label)
     };
 
     // 6. Apply log transformation if needed (for all x series)
     let x_series_values: Vec<Vec<f64>> = if x_log {
-        x_series_values.iter().map(|series| {
-            series.iter().map(|&v| if v.is_nan() || v <= 0.0 { f64::NAN } else { v.log10() }).collect()
-        }).collect()
+        x_series_values
+            .iter()
+            .map(|series| {
+                series
+                    .iter()
+                    .map(|&v| {
+                        if v.is_nan() || v <= 0.0 {
+                            f64::NAN
+                        } else {
+                            v.log10()
+                        }
+                    })
+                    .collect()
+            })
+            .collect()
     } else {
         x_series_values
     };
 
     let y_values: Vec<f64> = if y_log {
-        y_values.iter().map(|&v| if v.is_nan() || v <= 0.0 { f64::NAN } else { v.log10() }).collect()
+        y_values
+            .iter()
+            .map(|&v| {
+                if v.is_nan() || v <= 0.0 {
+                    f64::NAN
+                } else {
+                    v.log10()
+                }
+            })
+            .collect()
     } else {
         y_values
     };
@@ -2083,27 +2449,57 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let has_histogram = if let Some(HayashiValue::List(layers)) = plot.get("layers") {
         layers.iter().any(|l| {
             if let HayashiValue::Dict(d) = l {
-                d.get("geom").and_then(|g| if let HayashiValue::Str(s) = g { Some(s == "histogram") } else { None }).unwrap_or(false)
-            } else { false }
+                d.get("geom")
+                    .and_then(|g| {
+                        if let HayashiValue::Str(s) = g {
+                            Some(s == "histogram")
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(false)
+            } else {
+                false
+            }
         })
-    } else { false };
+    } else {
+        false
+    };
 
     let y_values: Vec<f64> = if has_histogram {
         // Compute histogram counts from x_series_values[0] and use as y
         let bins = if let Some(HayashiValue::List(layers)) = plot.get("layers") {
-            layers.iter().filter_map(|l| {
-                if let HayashiValue::Dict(d) = l {
-                    if d.get("geom").and_then(|g| if let HayashiValue::Str(s) = g { Some(s == "histogram") } else { None }).unwrap_or(false) {
-                        return d.get("bins").and_then(|b| match b {
-                            HayashiValue::Int(i) => Some(*i as usize),
-                            HayashiValue::Float(f) => Some(*f as usize),
-                            _ => None,
-                        }).or(Some(10));
+            layers
+                .iter()
+                .filter_map(|l| {
+                    if let HayashiValue::Dict(d) = l {
+                        if d.get("geom")
+                            .and_then(|g| {
+                                if let HayashiValue::Str(s) = g {
+                                    Some(s == "histogram")
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or(false)
+                        {
+                            return d
+                                .get("bins")
+                                .and_then(|b| match b {
+                                    HayashiValue::Int(i) => Some(*i as usize),
+                                    HayashiValue::Float(f) => Some(*f as usize),
+                                    _ => None,
+                                })
+                                .or(Some(10));
+                        }
                     }
-                }
-                None
-            }).next().unwrap_or(10)
-        } else { 10 };
+                    None
+                })
+                .next()
+                .unwrap_or(10)
+        } else {
+            10
+        };
 
         let x_vals = &x_series_values[0];
         let valid: Vec<f64> = x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
@@ -2119,18 +2515,26 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                 let mut counts = vec![0usize; bins];
                 for &val in &valid {
                     let idx = ((val - v_min) / bin_width) as usize;
-                    if idx < bins { counts[idx] += 1; } else { counts[bins-1] += 1; }
+                    if idx < bins {
+                        counts[idx] += 1;
+                    } else {
+                        counts[bins - 1] += 1;
+                    }
                 }
                 // y_values: for each x data point, use its bin count
                 // This makes y_min=0, y_max=max_count
-                x_vals.iter().map(|&x| {
-                    if x.is_nan() { f64::NAN }
-                    else {
-                        let idx = ((x - v_min) / bin_width) as usize;
-                        let i = if idx < bins { idx } else { bins - 1 };
-                        counts[i] as f64
-                    }
-                }).collect()
+                x_vals
+                    .iter()
+                    .map(|&x| {
+                        if x.is_nan() {
+                            f64::NAN
+                        } else {
+                            let idx = ((x - v_min) / bin_width) as usize;
+                            let i = if idx < bins { idx } else { bins - 1 };
+                            counts[i] as f64
+                        }
+                    })
+                    .collect()
             }
         }
     } else {
@@ -2138,57 +2542,127 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     };
 
     // 7. Compute range limits across all x series
-    let x_min = x_series_values.iter()
+    let x_min = x_series_values
+        .iter()
         .flat_map(|series| series.iter())
         .filter(|&&v| !v.is_nan())
         .fold(f64::INFINITY, |a, &b| a.min(b));
-    let x_max = x_series_values.iter()
+    let x_max = x_series_values
+        .iter()
         .flat_map(|series| series.iter())
         .filter(|&&v| !v.is_nan())
         .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    let y_min = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::INFINITY, |a, &b| a.min(b));
-    let y_max = y_values.iter().filter(|&&v| !v.is_nan()).fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    let y_min = y_values
+        .iter()
+        .filter(|&&v| !v.is_nan())
+        .fold(f64::INFINITY, |a, &b| a.min(b));
+    let y_max = y_values
+        .iter()
+        .filter(|&&v| !v.is_nan())
+        .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
     // Handle empty or constant coordinate boundaries
-    let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.05 };
-    let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
+    let x_min = if x_min.is_infinite() {
+        0.0
+    } else {
+        x_min - (x_max - x_min).abs() * 0.05
+    };
+    let x_max = if x_max.is_infinite() {
+        10.0
+    } else {
+        x_max + (x_max - x_min).abs() * 0.05
+    };
     // For histograms, y-axis starts at 0 (frequencies are non-negative)
-    let y_min = if y_min.is_infinite() || has_histogram { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
-    let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
+    let y_min = if y_min.is_infinite() || has_histogram {
+        0.0
+    } else {
+        y_min - (y_max - y_min).abs() * 0.05
+    };
+    let y_max = if y_max.is_infinite() {
+        10.0
+    } else {
+        y_max + (y_max - y_min).abs() * 0.05
+    };
 
     // 7. Apply scale limits if specified
     let scales_dict = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
         Some(scales)
-    } else { None };
-    let manual_x_limits = scales_dict.is_some_and(|s| s.contains_key("x_limit_min") && s.contains_key("x_limit_max"));
-    let manual_y_limits = scales_dict.is_some_and(|s| s.contains_key("y_limit_min") && s.contains_key("y_limit_max"));
+    } else {
+        None
+    };
+    let manual_x_limits =
+        scales_dict.is_some_and(|s| s.contains_key("x_limit_min") && s.contains_key("x_limit_max"));
+    let manual_y_limits =
+        scales_dict.is_some_and(|s| s.contains_key("y_limit_min") && s.contains_key("y_limit_max"));
 
     let (x_min, x_max) = if manual_x_limits {
         if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-            let min = scales.get("x_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(x_min);
-            let max = scales.get("x_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(x_max);
+            let min = scales
+                .get("x_limit_min")
+                .and_then(|v| match v {
+                    HayashiValue::Float(f) => Some(*f),
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    _ => None,
+                })
+                .unwrap_or(x_min);
+            let max = scales
+                .get("x_limit_max")
+                .and_then(|v| match v {
+                    HayashiValue::Float(f) => Some(*f),
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    _ => None,
+                })
+                .unwrap_or(x_max);
             (min, max)
-        } else { (x_min, x_max) }
-    } else { (x_min, x_max) };
+        } else {
+            (x_min, x_max)
+        }
+    } else {
+        (x_min, x_max)
+    };
 
     let (y_min, y_max) = if manual_y_limits {
         if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-            let min = scales.get("y_limit_min").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(y_min);
-            let max = scales.get("y_limit_max").and_then(|v| match v { HayashiValue::Float(f) => Some(*f), HayashiValue::Int(i) => Some(*i as f64), _ => None }).unwrap_or(y_max);
+            let min = scales
+                .get("y_limit_min")
+                .and_then(|v| match v {
+                    HayashiValue::Float(f) => Some(*f),
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    _ => None,
+                })
+                .unwrap_or(y_min);
+            let max = scales
+                .get("y_limit_max")
+                .and_then(|v| match v {
+                    HayashiValue::Float(f) => Some(*f),
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    _ => None,
+                })
+                .unwrap_or(y_max);
             (min, max)
-        } else { (y_min, y_max) }
-    } else { (y_min, y_max) };
-    
+        } else {
+            (y_min, y_max)
+        }
+    } else {
+        (y_min, y_max)
+    };
+
     // 8. Get dimensions from spec or use defaults
     let (width, height) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        let w = spec.get("width").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(800);
-        let h = spec.get("height").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(600);
+        let w = spec
+            .get("width")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i as u32),
+                _ => None,
+            })
+            .unwrap_or(800);
+        let h = spec
+            .get("height")
+            .and_then(|v| match v {
+                HayashiValue::Int(i) => Some(*i as u32),
+                _ => None,
+            })
+            .unwrap_or(600);
         (w, h)
     } else {
         (800, 600)
@@ -2196,72 +2670,102 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
     // 8. Get margins from spec or use defaults
     // Default margins: top=60 (title area), bottom=60 (x-axis labels), left=60 (y-axis labels), right=20
-    let (margin_top, margin_bottom, margin_left, margin_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        let mt = spec.get("margin_top").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(60);
-        let mb = spec.get("margin_bottom").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(60);
-        let ml = spec.get("margin_left").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(60);
-        let mr = spec.get("margin_right").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as u32),
-            _ => None,
-        }).unwrap_or(20);
-        (mt, mb, ml, mr)
-    } else {
-        (60, 60, 60, 20)
-    };
+    let (margin_top, margin_bottom, margin_left, margin_right) =
+        if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+            let mt = spec
+                .get("margin_top")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(60);
+            let mb = spec
+                .get("margin_bottom")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(60);
+            let ml = spec
+                .get("margin_left")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(60);
+            let mr = spec
+                .get("margin_right")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as u32),
+                    _ => None,
+                })
+                .unwrap_or(20);
+            (mt, mb, ml, mr)
+        } else {
+            (60, 60, 60, 20)
+        };
 
     // 8.5. Get padding from spec or use defaults
     // Default padding: top=10, bottom=10, left=10, right=10 (internal spacing within plot area)
-    let (padding_top, padding_bottom, padding_left, padding_right) = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        let pt = spec.get("padding_top").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        let pb = spec.get("padding_bottom").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        let pl = spec.get("padding_left").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        let pr = spec.get("padding_right").and_then(|v| match v {
-            HayashiValue::Int(i) => Some(*i as f64),
-            HayashiValue::Float(f) => Some(*f),
-            _ => None,
-        }).unwrap_or(10.0);
-        (pt, pb, pl, pr)
-    } else {
-        (10.0, 10.0, 10.0, 10.0)
-    };
+    let (padding_top, padding_bottom, padding_left, padding_right) =
+        if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
+            let pt = spec
+                .get("padding_top")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            let pb = spec
+                .get("padding_bottom")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            let pl = spec
+                .get("padding_left")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            let pr = spec
+                .get("padding_right")
+                .and_then(|v| match v {
+                    HayashiValue::Int(i) => Some(*i as f64),
+                    HayashiValue::Float(f) => Some(*f),
+                    _ => None,
+                })
+                .unwrap_or(10.0);
+            (pt, pb, pl, pr)
+        } else {
+            (10.0, 10.0, 10.0, 10.0)
+        };
 
     // 8.6. Read legend configuration from spec
     let show_legend = if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
-        spec.get("show_legend").and_then(|v| match v {
-            HayashiValue::Bool(b) => Some(*b),
-            _ => None,
-        }).unwrap_or(false)
+        spec.get("show_legend")
+            .and_then(|v| match v {
+                HayashiValue::Bool(b) => Some(*b),
+                _ => None,
+            })
+            .unwrap_or(false)
     } else {
         false
     };
 
     let legend_position = if show_legend {
         if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
-            spec.get("legend_position").and_then(|v| match v {
-                HayashiValue::Str(s) => Some(s.clone()),
-                _ => None,
-            }).unwrap_or_else(|| "right".to_string())
+            spec.get("legend_position")
+                .and_then(|v| match v {
+                    HayashiValue::Str(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .unwrap_or_else(|| "right".to_string())
         } else {
             "right".to_string()
         }
@@ -2271,10 +2775,12 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
     let legend_location = if show_legend {
         if let Some(HayashiValue::Dict(ref spec)) = plot.get("spec") {
-            spec.get("legend_location").and_then(|v| match v {
-                HayashiValue::Str(s) => Some(s.clone()),
-                _ => None,
-            }).unwrap_or_else(|| "outside".to_string())
+            spec.get("legend_location")
+                .and_then(|v| match v {
+                    HayashiValue::Str(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .unwrap_or_else(|| "outside".to_string())
         } else {
             "outside".to_string()
         }
@@ -2305,18 +2811,21 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     };
 
     let legend_dims: Option<(f64, f64)> = if show_legend && !legend_items.is_empty() {
-        let char_width = 7.0;       // approximate pixels per character
-        let line_height = 20.0;     // pixels per legend item (vertical layout)
-        let box_padding = 10.0;     // padding inside legend box
-        let item_gap = 25.0;        // horizontal gap between items (bottom layout)
+        let char_width = 7.0; // approximate pixels per character
+        let line_height = 20.0; // pixels per legend item (vertical layout)
+        let box_padding = 10.0; // padding inside legend box
+        let item_gap = 25.0; // horizontal gap between items (bottom layout)
 
-        let max_name_width = legend_items.iter()
+        let max_name_width = legend_items
+            .iter()
             .map(|name| name.len() as f64 * char_width)
             .fold(0.0f64, |a, b| a.max(b));
 
-        let (box_width, box_height) = if legend_location == "outside" && legend_position == "bottom" {
+        let (box_width, box_height) = if legend_location == "outside" && legend_position == "bottom"
+        {
             // Horizontal layout: sum of all item widths
-            let total_text: f64 = legend_items.iter()
+            let total_text: f64 = legend_items
+                .iter()
                 .map(|name| name.len() as f64 * char_width + 35.0) // color box + text
                 .sum();
             let box_w = total_text + (legend_items.len() - 1) as f64 * item_gap + box_padding * 2.0;
@@ -2324,7 +2833,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             (box_w, box_h)
         } else {
             // Vertical layout (left, right, inside)
-            let box_w = max_name_width + 35.0 + 15.0;   // text + margin + color box
+            let box_w = max_name_width + 35.0 + 15.0; // text + margin + color box
             let box_h = legend_items.len() as f64 * line_height + box_padding * 2.0;
             (box_w, box_h)
         };
@@ -2345,9 +2854,9 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             if legend_location == "outside" {
                 match legend_position.as_str() {
                     "bottom" => mb += box_h.ceil() as u32 + 3,
-                    "right"  => mr += box_w.ceil() as u32 + 3,
-                    "left"   => ml += box_w.ceil() as u32 + 3,
-                    _        => mr += box_w.ceil() as u32 + 3,
+                    "right" => mr += box_w.ceil() as u32 + 3,
+                    "left" => ml += box_w.ceil() as u32 + 3,
+                    _ => mr += box_w.ceil() as u32 + 3,
                 }
             }
         }
@@ -2357,39 +2866,47 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
     // 9. Get background color from spec or use default (white)
     let background_color_name = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        spec.get("background_color").and_then(|v| match v {
-            HayashiValue::Str(s) => Some(s.clone()),
-            _ => None,
-        }).unwrap_or_else(|| "white".to_string())
+        spec.get("background_color")
+            .and_then(|v| match v {
+                HayashiValue::Str(s) => Some(s.clone()),
+                _ => None,
+            })
+            .unwrap_or_else(|| "white".to_string())
     } else {
         "white".to_string()
     };
 
     // 10. Get grid setting from spec or use default (true)
     let show_grid = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        spec.get("show_grid").and_then(|v| match v {
-            HayashiValue::Bool(b) => Some(*b),
-            _ => None,
-        }).unwrap_or(true)
+        spec.get("show_grid")
+            .and_then(|v| match v {
+                HayashiValue::Bool(b) => Some(*b),
+                _ => None,
+            })
+            .unwrap_or(true)
     } else {
         true
     };
 
     // 10b. Get theme settings from spec
     let hide_axis_labels = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        spec.get("hide_axis_labels").and_then(|v| match v {
-            HayashiValue::Bool(b) => Some(*b),
-            _ => None,
-        }).unwrap_or(false)
+        spec.get("hide_axis_labels")
+            .and_then(|v| match v {
+                HayashiValue::Bool(b) => Some(*b),
+                _ => None,
+            })
+            .unwrap_or(false)
     } else {
         false
     };
 
     let _panel_border = if let Some(HayashiValue::Dict(spec)) = plot.get("spec") {
-        spec.get("panel_border").and_then(|v| match v {
-            HayashiValue::Bool(b) => Some(*b),
-            _ => None,
-        }).unwrap_or(false)
+        spec.get("panel_border")
+            .and_then(|v| match v {
+                HayashiValue::Bool(b) => Some(*b),
+                _ => None,
+            })
+            .unwrap_or(false)
     } else {
         false
     };
@@ -2398,11 +2915,11 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let mut svg_buffer = String::new();
     {
         let root = SVGBackend::with_string(&mut svg_buffer, (width, height)).into_drawing_area();
-        
+
         // Parse and apply background color (convert to RGBColor)
         let bg_rgb = parse_color_to_rgb(&background_color_name);
         root.fill(&bg_rgb).map_err(|e| e.to_string())?;
-        
+
         // Apply padding to axis ranges (internal spacing within plot area)
         // Padding is in pixels, so we need to convert to data coordinates
         // Skip padding when manual limits are set (user wants exact bounds)
@@ -2412,10 +2929,26 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         let x_units_per_pixel = (x_max - x_min) / plot_width;
         let y_units_per_pixel = (y_max - y_min) / plot_height;
 
-        let x_min = if manual_x_limits { x_min } else { x_min + padding_left * x_units_per_pixel };
-        let x_max = if manual_x_limits { x_max } else { x_max - padding_right * x_units_per_pixel };
-        let y_min = if manual_y_limits { y_min } else { y_min + padding_bottom * y_units_per_pixel };
-        let y_max = if manual_y_limits { y_max } else { y_max - padding_top * y_units_per_pixel };
+        let x_min = if manual_x_limits {
+            x_min
+        } else {
+            x_min + padding_left * x_units_per_pixel
+        };
+        let x_max = if manual_x_limits {
+            x_max
+        } else {
+            x_max - padding_right * x_units_per_pixel
+        };
+        let y_min = if manual_y_limits {
+            y_min
+        } else {
+            y_min + padding_bottom * y_units_per_pixel
+        };
+        let y_max = if manual_y_limits {
+            y_max
+        } else {
+            y_max - padding_top * y_units_per_pixel
+        };
 
         let mut chart = ChartBuilder::on(&root)
             .caption(title, ("sans-serif", 30).into_font())
@@ -2427,10 +2960,11 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             .y_label_area_size(40)
             .build_cartesian_2d(x_min..x_max, y_min..y_max)
             .map_err(|e| e.to_string())?;
-            
+
         if hide_axis_labels {
             // theme_void: no axis labels, no mesh
-            chart.configure_mesh()
+            chart
+                .configure_mesh()
                 .disable_x_mesh()
                 .disable_y_mesh()
                 .disable_x_axis()
@@ -2438,13 +2972,15 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                 .draw()
                 .map_err(|e| e.to_string())?;
         } else if show_grid {
-            chart.configure_mesh()
+            chart
+                .configure_mesh()
                 .x_desc(x_label)
                 .y_desc(y_label)
                 .draw()
                 .map_err(|e| e.to_string())?;
         } else {
-            chart.configure_mesh()
+            chart
+                .configure_mesh()
                 .x_desc(x_label)
                 .y_desc(y_label)
                 .disable_x_mesh()
@@ -2452,7 +2988,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                 .draw()
                 .map_err(|e| e.to_string())?;
         }
-            
+
         // Draw layers sequentially
         if let Some(HayashiValue::List(layers)) = plot.get("layers") {
             for layer_val in layers {
@@ -2467,29 +3003,37 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                             Some(HayashiValue::Int(s)) => *s as f64,
                             _ => 4.0,
                         };
-                        
+
                         match geom.as_str() {
                             "point" => {
                                 if let Some((_, ref group_indices)) = aes_groups {
                                     // Aesthetic color mapping: each point colored by its group
                                     let x_vals = &x_series_values[0];
-                                    chart.draw_series(
-                                        x_vals.iter().zip(y_values.iter()).zip(group_indices.iter())
-                                            .filter(|((&x, &y), _)| !x.is_nan() && !y.is_nan())
-                                            .map(|((&x, &y), &gi)| {
-                                                let color = get_series_color(gi).filled();
-                                                Circle::new((x, y), size as i32, color)
-                                            })
-                                    ).map_err(|e| e.to_string())?;
+                                    chart
+                                        .draw_series(
+                                            x_vals
+                                                .iter()
+                                                .zip(y_values.iter())
+                                                .zip(group_indices.iter())
+                                                .filter(|((&x, &y), _)| !x.is_nan() && !y.is_nan())
+                                                .map(|((&x, &y), &gi)| {
+                                                    let color = get_series_color(gi).filled();
+                                                    Circle::new((x, y), size as i32, color)
+                                                }),
+                                        )
+                                        .map_err(|e| e.to_string())?;
                                 } else if color_name == "auto" && x_series_values.len() > 1 {
                                     // Auto color: render each x series with different color
                                     for (idx, x_vals) in x_series_values.iter().enumerate() {
                                         let series_name = &x_series[idx];
-                                        
+
                                         // Check for series-specific config
-                                        let series_color = if let Some(ref configs) = series_config {
+                                        let series_color = if let Some(ref configs) = series_config
+                                        {
                                             if let Some(config) = configs.get(series_name) {
-                                                if let Some(HayashiValue::Str(c)) = config.get("color") {
+                                                if let Some(HayashiValue::Str(c)) =
+                                                    config.get("color")
+                                                {
                                                     parse_color(c)
                                                 } else {
                                                     get_series_color(idx).filled()
@@ -2500,12 +3044,16 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         } else {
                                             get_series_color(idx).filled()
                                         };
-                                        
+
                                         let series_size = if let Some(ref configs) = series_config {
                                             if let Some(config) = configs.get(series_name) {
-                                                if let Some(HayashiValue::Float(s)) = config.get("size") {
+                                                if let Some(HayashiValue::Float(s)) =
+                                                    config.get("size")
+                                                {
                                                     *s
-                                                } else if let Some(HayashiValue::Int(s)) = config.get("size") {
+                                                } else if let Some(HayashiValue::Int(s)) =
+                                                    config.get("size")
+                                                {
                                                     *s as f64
                                                 } else {
                                                     size
@@ -2516,22 +3064,38 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         } else {
                                             size
                                         };
-                                        
-                                        chart.draw_series(
-                                            x_vals.iter().zip(y_values.iter())
-                                                .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                                .map(|(&x, &y)| Circle::new((x, y), series_size as i32, series_color))
-                                        ).map_err(|e| e.to_string())?;
+
+                                        chart
+                                            .draw_series(
+                                                x_vals
+                                                    .iter()
+                                                    .zip(y_values.iter())
+                                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                                    .map(|(&x, &y)| {
+                                                        Circle::new(
+                                                            (x, y),
+                                                            series_size as i32,
+                                                            series_color,
+                                                        )
+                                                    }),
+                                            )
+                                            .map_err(|e| e.to_string())?;
                                     }
                                 } else {
                                     // Use single specified color for all series
                                     let style = parse_color(color_name);
                                     for x_vals in &x_series_values {
-                                        chart.draw_series(
-                                            x_vals.iter().zip(y_values.iter())
-                                                .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                                .map(|(&x, &y)| Circle::new((x, y), size as i32, style))
-                                        ).map_err(|e| e.to_string())?;
+                                        chart
+                                            .draw_series(
+                                                x_vals
+                                                    .iter()
+                                                    .zip(y_values.iter())
+                                                    .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                                    .map(|(&x, &y)| {
+                                                        Circle::new((x, y), size as i32, style)
+                                                    }),
+                                            )
+                                            .map_err(|e| e.to_string())?;
                                     }
                                 }
                             }
@@ -2540,28 +3104,36 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     // Aesthetic color mapping: draw a separate line per group
                                     let x_vals = &x_series_values[0];
                                     for (gi, _group_name) in unique_groups.iter().enumerate() {
-                                        let mut points: Vec<(f64, f64)> = x_vals.iter()
+                                        let mut points: Vec<(f64, f64)> = x_vals
+                                            .iter()
                                             .zip(y_values.iter())
                                             .zip(group_indices.iter())
-                                            .filter(|((&x, &y), &g)| !x.is_nan() && !y.is_nan() && g == gi)
+                                            .filter(|((&x, &y), &g)| {
+                                                !x.is_nan() && !y.is_nan() && g == gi
+                                            })
                                             .map(|((&x, &y), _)| (x, y))
                                             .collect();
                                         points.sort_by(|a, b| a.0.total_cmp(&b.0));
                                         if points.len() >= 2 {
-                                            chart.draw_series(
-                                                LineSeries::new(points.into_iter(),
-                                                    get_series_color(gi).stroke_width(size as u32))
-                                            ).map_err(|e| e.to_string())?;
+                                            chart
+                                                .draw_series(LineSeries::new(
+                                                    points.into_iter(),
+                                                    get_series_color(gi).stroke_width(size as u32),
+                                                ))
+                                                .map_err(|e| e.to_string())?;
                                         }
                                     }
                                 } else if color_name == "auto" && x_series_values.len() > 1 {
                                     for (idx, x_vals) in x_series_values.iter().enumerate() {
                                         let series_name = &x_series[idx];
-                                        
+
                                         // Check for series-specific config
-                                        let series_color = if let Some(ref configs) = series_config {
+                                        let series_color = if let Some(ref configs) = series_config
+                                        {
                                             if let Some(config) = configs.get(series_name) {
-                                                if let Some(HayashiValue::Str(c)) = config.get("color") {
+                                                if let Some(HayashiValue::Str(c)) =
+                                                    config.get("color")
+                                                {
                                                     parse_color(c)
                                                 } else {
                                                     get_series_color(idx).stroke_width(size as u32)
@@ -2572,12 +3144,16 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         } else {
                                             get_series_color(idx).stroke_width(size as u32)
                                         };
-                                        
+
                                         let series_size = if let Some(ref configs) = series_config {
                                             if let Some(config) = configs.get(series_name) {
-                                                if let Some(HayashiValue::Float(s)) = config.get("size") {
+                                                if let Some(HayashiValue::Float(s)) =
+                                                    config.get("size")
+                                                {
                                                     *s
-                                                } else if let Some(HayashiValue::Int(s)) = config.get("size") {
+                                                } else if let Some(HayashiValue::Int(s)) =
+                                                    config.get("size")
+                                                {
                                                     *s as f64
                                                 } else {
                                                     size
@@ -2588,29 +3164,36 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         } else {
                                             size
                                         };
-                                        
-                                        let mut points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+
+                                        let mut points: Vec<(f64, f64)> = x_vals
+                                            .iter()
+                                            .zip(y_values.iter())
                                             .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                             .map(|(&x, &y)| (x, y))
                                             .collect();
                                         points.sort_by(|a, b| a.0.total_cmp(&b.0));
-                                        
-                                        chart.draw_series(
-                                            LineSeries::new(points.into_iter(), series_color.stroke_width(series_size as u32))
-                                        ).map_err(|e| e.to_string())?;
+
+                                        chart
+                                            .draw_series(LineSeries::new(
+                                                points.into_iter(),
+                                                series_color.stroke_width(series_size as u32),
+                                            ))
+                                            .map_err(|e| e.to_string())?;
                                     }
                                 } else {
                                     let style = parse_color(color_name).stroke_width(size as u32);
                                     for x_vals in &x_series_values {
-                                        let mut points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+                                        let mut points: Vec<(f64, f64)> = x_vals
+                                            .iter()
+                                            .zip(y_values.iter())
                                             .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                             .map(|(&x, &y)| (x, y))
                                             .collect();
                                         points.sort_by(|a, b| a.0.total_cmp(&b.0));
-                                        
-                                        chart.draw_series(
-                                            LineSeries::new(points.into_iter(), style)
-                                        ).map_err(|e| e.to_string())?;
+
+                                        chart
+                                            .draw_series(LineSeries::new(points.into_iter(), style))
+                                            .map_err(|e| e.to_string())?;
                                     }
                                 }
                             }
@@ -2623,13 +3206,23 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     _ => 0.8,
                                 };
                                 let x_vals = &x_series_values[0]; // Use first series
-                                chart.draw_series(
-                                    x_vals.iter().zip(y_values.iter())
-                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                        .map(|(&x, &y)| {
-                                            Rectangle::new([(x - bar_width/2.0, 0.0), (x + bar_width/2.0, y)], style)
-                                        })
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(
+                                        x_vals
+                                            .iter()
+                                            .zip(y_values.iter())
+                                            .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                            .map(|(&x, &y)| {
+                                                Rectangle::new(
+                                                    [
+                                                        (x - bar_width / 2.0, 0.0),
+                                                        (x + bar_width / 2.0, y),
+                                                    ],
+                                                    style,
+                                                )
+                                            }),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             }
                             "histogram" => {
                                 // For multiple series, use only first series (simplified)
@@ -2641,13 +3234,17 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 let x_vals = &x_series_values[0]; // Use first series
-                                let valid_values: Vec<f64> = x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
+                                let valid_values: Vec<f64> =
+                                    x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
                                 if valid_values.is_empty() {
                                     return Err("No valid data for histogram".to_string());
                                 }
 
-                                let y_min = valid_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-                                let y_max = valid_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                                let y_min =
+                                    valid_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+                                let y_max = valid_values
+                                    .iter()
+                                    .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
                                 let bin_width = (y_max - y_min) / bins as f64;
 
                                 let mut histogram = vec![0usize; bins];
@@ -2660,15 +3257,20 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     }
                                 }
 
-                                chart.draw_series(
-                                    histogram.iter().enumerate()
-                                        .map(|(i, &count)| {
-                                            let x_center = y_min + (i as f64 + 0.5) * bin_width;
-                                            let bar_height = count as f64;
-                                            let bar_width = bin_width * 0.9;
-                                            Rectangle::new([(x_center - bar_width/2.0, 0.0), (x_center + bar_width/2.0, bar_height)], style)
-                                        })
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(histogram.iter().enumerate().map(|(i, &count)| {
+                                        let x_center = y_min + (i as f64 + 0.5) * bin_width;
+                                        let bar_height = count as f64;
+                                        let bar_width = bin_width * 0.9;
+                                        Rectangle::new(
+                                            [
+                                                (x_center - bar_width / 2.0, 0.0),
+                                                (x_center + bar_width / 2.0, bar_height),
+                                            ],
+                                            style,
+                                        )
+                                    }))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "boxplot" => {
                                 // For multiple series, use only first series (simplified)
@@ -2680,7 +3282,8 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 let x_vals = &x_series_values[0]; // Use first series
-                                let mut valid_values: Vec<f64> = x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
+                                let mut valid_values: Vec<f64> =
+                                    x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
                                 if valid_values.is_empty() {
                                     return Err("No valid data for boxplot".to_string());
                                 }
@@ -2696,40 +3299,75 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 let median = valid_values[median_idx];
                                 let q3 = valid_values[q3_idx];
                                 let iqr = q3 - q1;
-                                let lower_whisker = valid_values.iter().find(|&&v| v >= q1 - 1.5 * iqr).unwrap_or(&valid_values[0]);
-                                let upper_whisker = valid_values.iter().rev().find(|&&v| v <= q3 + 1.5 * iqr).unwrap_or(&valid_values[n - 1]);
+                                let lower_whisker = valid_values
+                                    .iter()
+                                    .find(|&&v| v >= q1 - 1.5 * iqr)
+                                    .unwrap_or(&valid_values[0]);
+                                let upper_whisker = valid_values
+                                    .iter()
+                                    .rev()
+                                    .find(|&&v| v <= q3 + 1.5 * iqr)
+                                    .unwrap_or(&valid_values[n - 1]);
 
-                                let x_pos = if let Some(&x) = x_vals.first() { x } else { 0.0 };
+                                let x_pos = if let Some(&x) = x_vals.first() {
+                                    x
+                                } else {
+                                    0.0
+                                };
 
-                                chart.draw_series(std::iter::once(Rectangle::new([
-                                    (x_pos - box_width/2.0, q1),
-                                    (x_pos + box_width/2.0, q3)
-                                ], style))).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(Rectangle::new(
+                                        [
+                                            (x_pos - box_width / 2.0, q1),
+                                            (x_pos + box_width / 2.0, q3),
+                                        ],
+                                        style,
+                                    )))
+                                    .map_err(|e| e.to_string())?;
 
-                                chart.draw_series(std::iter::once(PathElement::new(
-                                    vec![(x_pos - box_width/2.0, median), (x_pos + box_width/2.0, median)],
-                                    BLACK.stroke_width(2)
-                                ))).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
+                                        vec![
+                                            (x_pos - box_width / 2.0, median),
+                                            (x_pos + box_width / 2.0, median),
+                                        ],
+                                        BLACK.stroke_width(2),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
 
-                                chart.draw_series(std::iter::once(PathElement::new(
-                                    vec![(x_pos, q3), (x_pos, *upper_whisker)],
-                                    style.stroke_width(1)
-                                ))).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
+                                        vec![(x_pos, q3), (x_pos, *upper_whisker)],
+                                        style.stroke_width(1),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
 
-                                chart.draw_series(std::iter::once(PathElement::new(
-                                    vec![(x_pos, q1), (x_pos, *lower_whisker)],
-                                    style.stroke_width(1)
-                                ))).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
+                                        vec![(x_pos, q1), (x_pos, *lower_whisker)],
+                                        style.stroke_width(1),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
 
-                                chart.draw_series(std::iter::once(PathElement::new(
-                                    vec![(x_pos - box_width/4.0, *upper_whisker), (x_pos + box_width/4.0, *upper_whisker)],
-                                    style.stroke_width(1)
-                                ))).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
+                                        vec![
+                                            (x_pos - box_width / 4.0, *upper_whisker),
+                                            (x_pos + box_width / 4.0, *upper_whisker),
+                                        ],
+                                        style.stroke_width(1),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
 
-                                chart.draw_series(std::iter::once(PathElement::new(
-                                    vec![(x_pos - box_width/4.0, *lower_whisker), (x_pos + box_width/4.0, *lower_whisker)],
-                                    style.stroke_width(1)
-                                ))).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
+                                        vec![
+                                            (x_pos - box_width / 4.0, *lower_whisker),
+                                            (x_pos + box_width / 4.0, *lower_whisker),
+                                        ],
+                                        style.stroke_width(1),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "heatmap" => {
                                 // For multiple series, use only first series (simplified)
@@ -2741,24 +3379,42 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 let x_vals = &x_series_values[0]; // Use first series
-                                let valid_values: Vec<f64> = x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
+                                let valid_values: Vec<f64> =
+                                    x_vals.iter().filter(|&&v| !v.is_nan()).cloned().collect();
                                 if valid_values.is_empty() {
                                     return Err("No valid data for heatmap".to_string());
                                 }
 
-                                let y_min = valid_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-                                let y_max = valid_values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                                let y_min =
+                                    valid_values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+                                let y_max = valid_values
+                                    .iter()
+                                    .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
                                 let range = y_max - y_min;
 
-                                chart.draw_series(
-                                    x_vals.iter().zip(y_values.iter())
-                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                        .map(|(&x, &y)| {
-                                            let intensity = if range > 0.0 { (y - y_min) / range } else { 0.5 };
-                                            let mixed_color = base_color.color.mix(intensity);
-                                            Rectangle::new([(x - cell_size/2.0, y - cell_size/2.0), (x + cell_size/2.0, y + cell_size/2.0)], mixed_color.filled())
-                                        })
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(
+                                        x_vals
+                                            .iter()
+                                            .zip(y_values.iter())
+                                            .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                            .map(|(&x, &y)| {
+                                                let intensity = if range > 0.0 {
+                                                    (y - y_min) / range
+                                                } else {
+                                                    0.5
+                                                };
+                                                let mixed_color = base_color.color.mix(intensity);
+                                                Rectangle::new(
+                                                    [
+                                                        (x - cell_size / 2.0, y - cell_size / 2.0),
+                                                        (x + cell_size / 2.0, y + cell_size / 2.0),
+                                                    ],
+                                                    mixed_color.filled(),
+                                                )
+                                            }),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             }
                             "area" => {
                                 // For multiple series, use only first series (simplified)
@@ -2770,7 +3426,9 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 let x_vals = &x_series_values[0]; // Use first series
-                                let mut points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+                                let mut points: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(y_values.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y))
                                     .collect();
@@ -2781,24 +3439,26 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 }
 
                                 // Draw filled area using rectangles as approximation
-                                for i in 0..points.len()-1 {
+                                for i in 0..points.len() - 1 {
                                     let (x1, y1) = points[i];
-                                    let (x2, y2) = points[i+1];
-                                    let rect_points = vec![
-                                        (x1, 0.0),
-                                        (x1, y1),
-                                        (x2, y2),
-                                        (x2, 0.0)
-                                    ];
-                                    chart.draw_series(std::iter::once(
-                                        Polygon::new(rect_points, style)
-                                    )).map_err(|e| e.to_string())?;
+                                    let (x2, y2) = points[i + 1];
+                                    let rect_points =
+                                        vec![(x1, 0.0), (x1, y1), (x2, y2), (x2, 0.0)];
+                                    chart
+                                        .draw_series(std::iter::once(Polygon::new(
+                                            rect_points,
+                                            style,
+                                        )))
+                                        .map_err(|e| e.to_string())?;
                                 }
 
                                 // Draw line on top using PathElement
-                                chart.draw_series(std::iter::once(
-                                    PathElement::new(points, style.stroke_width(line_size as u32))
-                                )).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
+                                        points,
+                                        style.stroke_width(line_size as u32),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "hline" => {
                                 let style = parse_color(color_name);
@@ -2814,12 +3474,12 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 // Draw horizontal line across the chart
-                                chart.draw_series(std::iter::once(
-                                    PathElement::new(
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
                                         vec![(x_min, yintercept), (x_max, yintercept)],
-                                        style.stroke_width(line_size as u32)
-                                    )
-                                )).map_err(|e| e.to_string())?;
+                                        style.stroke_width(line_size as u32),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "vline" => {
                                 let style = parse_color(color_name);
@@ -2835,12 +3495,12 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 // Draw vertical line across the chart
-                                chart.draw_series(std::iter::once(
-                                    PathElement::new(
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
                                         vec![(xintercept, y_min), (xintercept, y_max)],
-                                        style.stroke_width(line_size as u32)
-                                    )
-                                )).map_err(|e| e.to_string())?;
+                                        style.stroke_width(line_size as u32),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "abline" => {
                                 let style = parse_color(color_name);
@@ -2864,12 +3524,12 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 let y1 = slope * x_min + intercept;
                                 let y2 = slope * x_max + intercept;
 
-                                chart.draw_series(std::iter::once(
-                                    PathElement::new(
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
                                         vec![(x_min, y1), (x_max, y2)],
-                                        style.stroke_width(line_size as u32)
-                                    )
-                                )).map_err(|e| e.to_string())?;
+                                        style.stroke_width(line_size as u32),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "step" => {
                                 // For multiple series, use only first series (simplified)
@@ -2885,7 +3545,9 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 let x_vals = &x_series_values[0]; // Use first series
-                                let mut points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+                                let mut points: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(y_values.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y))
                                     .collect();
@@ -2903,7 +3565,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         for i in 0..points.len() {
                                             let (x, y) = points[i];
                                             if i > 0 {
-                                                let (_prev_x, prev_y) = points[i-1];
+                                                let (_prev_x, prev_y) = points[i - 1];
                                                 step_points.push((x, prev_y));
                                             }
                                             step_points.push((x, y));
@@ -2914,7 +3576,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         for i in 0..points.len() {
                                             let (x, y) = points[i];
                                             if i > 0 {
-                                                let (prev_x, _) = points[i-1];
+                                                let (prev_x, _) = points[i - 1];
                                                 step_points.push((prev_x, y));
                                             }
                                             step_points.push((x, y));
@@ -2925,7 +3587,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         for i in 0..points.len() {
                                             let (x, y) = points[i];
                                             if i > 0 {
-                                                let (_prev_x, prev_y) = points[i-1];
+                                                let (_prev_x, prev_y) = points[i - 1];
                                                 step_points.push((x, prev_y));
                                             }
                                             step_points.push((x, y));
@@ -2933,9 +3595,12 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     }
                                 }
 
-                                chart.draw_series(std::iter::once(
-                                    PathElement::new(step_points, style.stroke_width(line_size as u32))
-                                )).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(std::iter::once(PathElement::new(
+                                        step_points,
+                                        style.stroke_width(line_size as u32),
+                                    )))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "smooth" => {
                                 // For multiple series, use only first series (simplified)
@@ -2956,40 +3621,58 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
 
                                 let x_vals = &x_series_values[0]; // Use first series
                                 if method == "lm" {
-                                    if let Some((slope, intercept, _r2)) = linear_regression(x_vals, &y_values) {
+                                    if let Some((slope, intercept, _r2)) =
+                                        linear_regression(x_vals, &y_values)
+                                    {
                                         let y1 = slope * x_min + intercept;
                                         let y2 = slope * x_max + intercept;
 
-                                        chart.draw_series(std::iter::once(
-                                            PathElement::new(
+                                        chart
+                                            .draw_series(std::iter::once(PathElement::new(
                                                 vec![(x_min, y1), (x_max, y2)],
-                                                style.stroke_width(line_size as u32)
-                                            )
-                                        )).map_err(|e| e.to_string())?;
+                                                style.stroke_width(line_size as u32),
+                                            )))
+                                            .map_err(|e| e.to_string())?;
 
                                         if show_se {
-                                            if let Some(se) = linear_regression_se(x_vals, &y_values, slope, intercept) {
+                                            if let Some(se) = linear_regression_se(
+                                                x_vals, &y_values, slope, intercept,
+                                            ) {
                                                 let se_slope = se[0];
                                                 let se_intercept = se[1];
-                                                
+
                                                 // Approximate confidence band (simplified)
                                                 let ci_factor = 1.96; // 95% CI
-                                                let y1_upper = slope * x_min + intercept + ci_factor * (se_slope * x_min + se_intercept);
-                                                let y1_lower = slope * x_min + intercept - ci_factor * (se_slope * x_min + se_intercept);
-                                                let y2_upper = slope * x_max + intercept + ci_factor * (se_slope * x_max + se_intercept);
-                                                let y2_lower = slope * x_max + intercept - ci_factor * (se_slope * x_max + se_intercept);
+                                                let y1_upper = slope * x_min
+                                                    + intercept
+                                                    + ci_factor * (se_slope * x_min + se_intercept);
+                                                let y1_lower = slope * x_min + intercept
+                                                    - ci_factor * (se_slope * x_min + se_intercept);
+                                                let y2_upper = slope * x_max
+                                                    + intercept
+                                                    + ci_factor * (se_slope * x_max + se_intercept);
+                                                let y2_lower = slope * x_max + intercept
+                                                    - ci_factor * (se_slope * x_max + se_intercept);
 
                                                 // Draw confidence band as semi-transparent area
                                                 let band_color = style.color;
-                                                let band_style = RGBAColor(band_color.0, band_color.1, band_color.2, 0.2);
-                                                chart.draw_series(std::iter::once(
-                                                    Polygon::new(vec![
-                                                        (x_min, y1_lower),
-                                                        (x_max, y2_lower),
-                                                        (x_max, y2_upper),
-                                                        (x_min, y1_upper),
-                                                    ], band_style.filled())
-                                                )).map_err(|e| e.to_string())?;
+                                                let band_style = RGBAColor(
+                                                    band_color.0,
+                                                    band_color.1,
+                                                    band_color.2,
+                                                    0.2,
+                                                );
+                                                chart
+                                                    .draw_series(std::iter::once(Polygon::new(
+                                                        vec![
+                                                            (x_min, y1_lower),
+                                                            (x_max, y2_lower),
+                                                            (x_max, y2_upper),
+                                                            (x_min, y1_upper),
+                                                        ],
+                                                        band_style.filled(),
+                                                    )))
+                                                    .map_err(|e| e.to_string())?;
                                             }
                                         }
                                     }
@@ -3011,7 +3694,9 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 };
 
                                 let x_vals = &x_series_values[0]; // Use first series
-                                let mut points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+                                let mut points: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(y_values.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y))
                                     .collect();
@@ -3020,9 +3705,12 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 if points.len() >= 2 {
                                     // Generate smooth spline points
                                     let spline_points = catmull_rom_spline(&points, tension, 20);
-                                    chart.draw_series(std::iter::once(
-                                        PathElement::new(spline_points, style.stroke_width(line_size as u32))
-                                    )).map_err(|e| e.to_string())?;
+                                    chart
+                                        .draw_series(std::iter::once(PathElement::new(
+                                            spline_points,
+                                            style.stroke_width(line_size as u32),
+                                        )))
+                                        .map_err(|e| e.to_string())?;
                                 }
                             }
                             "text" => {
@@ -3048,10 +3736,15 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 let text_color_rgb = parse_color_to_rgb(color_name);
 
                                 // Draw text at specified coordinates using TextStyle
-                                let text_style = TextStyle::from(("sans-serif", text_size as i32)).color(&text_color_rgb);
-                                chart.draw_series(std::iter::once(
-                                    Text::new(label, (text_x, text_y), text_style)
-                                )).map_err(|e| e.to_string())?;
+                                let text_style = TextStyle::from(("sans-serif", text_size as i32))
+                                    .color(&text_color_rgb);
+                                chart
+                                    .draw_series(std::iter::once(Text::new(
+                                        label,
+                                        (text_x, text_y),
+                                        text_style,
+                                    )))
+                                    .map_err(|e| e.to_string())?;
                             }
                             "element" => {
                                 // Handle arbitrary geometric elements
@@ -3063,109 +3756,171 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     Some(HayashiValue::Dict(p)) => p,
                                     _ => return Err("params must be a Dictionary".to_string()),
                                 };
-                                
+
                                 let color_name = match params.get("color") {
                                     Some(HayashiValue::Str(c)) => c.as_str(),
                                     _ => "red",
                                 };
                                 let style = parse_color(color_name);
-                                
+
                                 match element_type {
                                     "circle" => {
                                         let x = match params.get("x") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("circle requires 'x' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "circle requires 'x' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let y = match params.get("y") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("circle requires 'y' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "circle requires 'y' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let size = match params.get("size") {
                                             Some(HayashiValue::Float(s)) => *s as i32,
                                             Some(HayashiValue::Int(s)) => *s as i32,
                                             _ => 10,
                                         };
-                                        chart.draw_series(std::iter::once(
-                                            Circle::new((x, y), size, style.filled())
-                                        )).map_err(|e| e.to_string())?;
+                                        chart
+                                            .draw_series(std::iter::once(Circle::new(
+                                                (x, y),
+                                                size,
+                                                style.filled(),
+                                            )))
+                                            .map_err(|e| e.to_string())?;
                                     }
                                     "rect" => {
                                         let x = match params.get("x") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("rect requires 'x' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "rect requires 'x' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let y = match params.get("y") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("rect requires 'y' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "rect requires 'y' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let width = match params.get("width") {
                                             Some(HayashiValue::Float(w)) => *w,
                                             Some(HayashiValue::Int(w)) => *w as f64,
-                                            _ => return Err("rect requires 'width' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "rect requires 'width' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let height = match params.get("height") {
                                             Some(HayashiValue::Float(h)) => *h,
                                             Some(HayashiValue::Int(h)) => *h as f64,
-                                            _ => return Err("rect requires 'height' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "rect requires 'height' parameter".to_string()
+                                                )
+                                            }
                                         };
-                                        chart.draw_series(std::iter::once(
-                                            Rectangle::new([(x, y), (x + width, y + height)], style.filled())
-                                        )).map_err(|e| e.to_string())?;
+                                        chart
+                                            .draw_series(std::iter::once(Rectangle::new(
+                                                [(x, y), (x + width, y + height)],
+                                                style.filled(),
+                                            )))
+                                            .map_err(|e| e.to_string())?;
                                     }
                                     "line_segment" => {
                                         let x1 = match params.get("x1") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("line_segment requires 'x1' parameter".to_string()),
+                                            _ => {
+                                                return Err("line_segment requires 'x1' parameter"
+                                                    .to_string())
+                                            }
                                         };
                                         let y1 = match params.get("y1") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("line_segment requires 'y1' parameter".to_string()),
+                                            _ => {
+                                                return Err("line_segment requires 'y1' parameter"
+                                                    .to_string())
+                                            }
                                         };
                                         let x2 = match params.get("x2") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("line_segment requires 'x2' parameter".to_string()),
+                                            _ => {
+                                                return Err("line_segment requires 'x2' parameter"
+                                                    .to_string())
+                                            }
                                         };
                                         let y2 = match params.get("y2") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("line_segment requires 'y2' parameter".to_string()),
+                                            _ => {
+                                                return Err("line_segment requires 'y2' parameter"
+                                                    .to_string())
+                                            }
                                         };
                                         let size = match params.get("size") {
                                             Some(HayashiValue::Float(s)) => *s as u32,
                                             Some(HayashiValue::Int(s)) => *s as u32,
                                             _ => 2,
                                         };
-                                        chart.draw_series(std::iter::once(
-                                            PathElement::new(vec![(x1, y1), (x2, y2)], style.stroke_width(size))
-                                        )).map_err(|e| e.to_string())?;
+                                        chart
+                                            .draw_series(std::iter::once(PathElement::new(
+                                                vec![(x1, y1), (x2, y2)],
+                                                style.stroke_width(size),
+                                            )))
+                                            .map_err(|e| e.to_string())?;
                                     }
                                     "arrow" => {
                                         let x1 = match params.get("x1") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("arrow requires 'x1' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "arrow requires 'x1' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let y1 = match params.get("y1") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("arrow requires 'y1' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "arrow requires 'y1' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let x2 = match params.get("x2") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("arrow requires 'x2' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "arrow requires 'x2' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let y2 = match params.get("y2") {
                                             Some(HayashiValue::Float(v)) => *v,
                                             Some(HayashiValue::Int(v)) => *v as f64,
-                                            _ => return Err("arrow requires 'y2' parameter".to_string()),
+                                            _ => {
+                                                return Err(
+                                                    "arrow requires 'y2' parameter".to_string()
+                                                )
+                                            }
                                         };
                                         let size = match params.get("size") {
                                             Some(HayashiValue::Float(s)) => *s as u32,
@@ -3173,21 +3928,31 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                             _ => 2,
                                         };
                                         // Draw line segment
-                                        chart.draw_series(std::iter::once(
-                                            PathElement::new(vec![(x1, y1), (x2, y2)], style.stroke_width(size))
-                                        )).map_err(|e| e.to_string())?;
+                                        chart
+                                            .draw_series(std::iter::once(PathElement::new(
+                                                vec![(x1, y1), (x2, y2)],
+                                                style.stroke_width(size),
+                                            )))
+                                            .map_err(|e| e.to_string())?;
                                         // Draw arrow head (simplified: small circle at end)
                                         let arrow_size = match params.get("arrow_size") {
                                             Some(HayashiValue::Float(s)) => *s as i32,
                                             Some(HayashiValue::Int(s)) => *s as i32,
                                             _ => 5,
                                         };
-                                        chart.draw_series(std::iter::once(
-                                            Circle::new((x2, y2), arrow_size, style.filled())
-                                        )).map_err(|e| e.to_string())?;
+                                        chart
+                                            .draw_series(std::iter::once(Circle::new(
+                                                (x2, y2),
+                                                arrow_size,
+                                                style.filled(),
+                                            )))
+                                            .map_err(|e| e.to_string())?;
                                     }
                                     _ => {
-                                        return Err(format!("Unknown element_type: {}", element_type));
+                                        return Err(format!(
+                                            "Unknown element_type: {}",
+                                            element_type
+                                        ));
                                     }
                                 }
                             }
@@ -3206,22 +3971,31 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 let ymax_vals = extract_column_f64(struct_arr, ymax_col)?;
                                 let x_vals = &x_series_values[0];
 
-                                let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(ymin_vals.iter())
+                                let mut pts: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(ymin_vals.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                    .map(|(&x, &y)| (x, y)).collect();
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
                                 pts.sort_by(|a, b| a.0.total_cmp(&b.0));
 
-                                let mut pts_upper: Vec<(f64,f64)> = x_vals.iter().zip(ymax_vals.iter())
+                                let mut pts_upper: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(ymax_vals.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                    .map(|(&x, &y)| (x, y)).collect();
+                                    .map(|(&x, &y)| (x, y))
+                                    .collect();
                                 pts_upper.sort_by(|a, b| a.0.total_cmp(&b.0));
 
                                 if pts.len() >= 2 && pts.len() == pts_upper.len() {
                                     let mut polygon = pts.clone();
                                     polygon.extend(pts_upper.into_iter().rev());
-                                    chart.draw_series(std::iter::once(
-                                        Polygon::new(polygon, style.filled())
-                                    )).map_err(|e| e.to_string())?;
+                                    chart
+                                        .draw_series(std::iter::once(Polygon::new(
+                                            polygon,
+                                            style.filled(),
+                                        )))
+                                        .map_err(|e| e.to_string())?;
                                 }
                             }
                             "col" => {
@@ -3229,29 +4003,38 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 let style = parse_color(color_name);
                                 let bar_width = size.max(1.0);
                                 let x_vals = &x_series_values[0];
-                                chart.draw_series(
-                                    x_vals.iter().zip(y_values.iter())
-                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                        .map(|(&x, &y)| {
-                                            Rectangle::new(
-                                                [(x - bar_width/2.0, 0.0), (x + bar_width/2.0, y)],
-                                                style.filled()
-                                            )
-                                        })
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(
+                                        x_vals
+                                            .iter()
+                                            .zip(y_values.iter())
+                                            .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                            .map(|(&x, &y)| {
+                                                Rectangle::new(
+                                                    [
+                                                        (x - bar_width / 2.0, 0.0),
+                                                        (x + bar_width / 2.0, y),
+                                                    ],
+                                                    style.filled(),
+                                                )
+                                            }),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             }
                             "path" => {
                                 // Path: connects points in data order (not sorted by x)
                                 let style = parse_color(color_name).stroke_width(size as u32);
                                 let x_vals = &x_series_values[0];
-                                let points: Vec<(f64, f64)> = x_vals.iter().zip(y_values.iter())
+                                let points: Vec<(f64, f64)> = x_vals
+                                    .iter()
+                                    .zip(y_values.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y))
                                     .collect();
                                 if points.len() >= 2 {
-                                    chart.draw_series(
-                                        LineSeries::new(points.into_iter(), style)
-                                    ).map_err(|e| e.to_string())?;
+                                    chart
+                                        .draw_series(LineSeries::new(points.into_iter(), style))
+                                        .map_err(|e| e.to_string())?;
                                 }
                             }
                             "jitter" => {
@@ -3270,19 +4053,25 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 // Use a simple LCG for deterministic jitter
                                 let mut seed: u64 = 12345;
                                 let mut rng = || {
-                                    seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                                    seed = seed
+                                        .wrapping_mul(6364136223846793005)
+                                        .wrapping_add(1442695040888963407);
                                     (seed >> 33) as f64 / (u32::MAX as f64) - 0.5
                                 };
                                 let style = parse_color(color_name);
-                                chart.draw_series(
-                                    x_vals.iter().zip(y_values.iter())
-                                        .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                        .map(|(&x, &y)| {
-                                            let dx = rng() * jw;
-                                            let dy = rng() * jh;
-                                            Circle::new((x + dx, y + dy), size as i32, style)
-                                        })
-                                ).map_err(|e| e.to_string())?;
+                                chart
+                                    .draw_series(
+                                        x_vals
+                                            .iter()
+                                            .zip(y_values.iter())
+                                            .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
+                                            .map(|(&x, &y)| {
+                                                let dx = rng() * jw;
+                                                let dy = rng() * jh;
+                                                Circle::new((x + dx, y + dy), size as i32, style)
+                                            }),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             }
                             "density" => {
                                 // Kernel density estimate of y values
@@ -3292,28 +4081,41 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     _ => 0.0,
                                 };
                                 let style = parse_color(color_name).stroke_width(size as u32);
-                                let data: Vec<f64> = y_values.iter()
-                                    .filter(|&&v| !v.is_nan())
-                                    .cloned().collect();
+                                let data: Vec<f64> =
+                                    y_values.iter().filter(|&&v| !v.is_nan()).cloned().collect();
                                 if data.len() >= 2 {
                                     let n = data.len() as f64;
                                     let mean = data.iter().sum::<f64>() / n;
-                                    let std = (data.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n).sqrt();
-                                    let h = if bw > 0.0 { bw } else { 1.06 * std * n.powf(-0.2) };
-                                    let y_min_d = data.iter().cloned().fold(f64::INFINITY, |a, b| a.min(b));
-                                    let y_max_d = data.iter().cloned().fold(f64::NEG_INFINITY, |a, b| a.max(b));
+                                    let std =
+                                        (data.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n)
+                                            .sqrt();
+                                    let h = if bw > 0.0 {
+                                        bw
+                                    } else {
+                                        1.06 * std * n.powf(-0.2)
+                                    };
+                                    let y_min_d =
+                                        data.iter().cloned().fold(f64::INFINITY, |a, b| a.min(b));
+                                    let y_max_d = data
+                                        .iter()
+                                        .cloned()
+                                        .fold(f64::NEG_INFINITY, |a, b| a.max(b));
                                     let range = y_max_d - y_min_d;
                                     let n_pts = 100;
-                                    let kde: Vec<(f64, f64)> = (0..n_pts).map(|i| {
-                                        let x = y_min_d + range * i as f64 / (n_pts - 1) as f64;
-                                        let density: f64 = data.iter()
-                                            .map(|&d| (-( (x - d) / h).powi(2) / 2.0).exp())
-                                            .sum::<f64>() / (n * h * (2.0 * std::f64::consts::PI).sqrt());
-                                        (x, density)
-                                    }).collect();
-                                    chart.draw_series(
-                                        LineSeries::new(kde.into_iter(), style)
-                                    ).map_err(|e| e.to_string())?;
+                                    let kde: Vec<(f64, f64)> = (0..n_pts)
+                                        .map(|i| {
+                                            let x = y_min_d + range * i as f64 / (n_pts - 1) as f64;
+                                            let density: f64 = data
+                                                .iter()
+                                                .map(|&d| (-((x - d) / h).powi(2) / 2.0).exp())
+                                                .sum::<f64>()
+                                                / (n * h * (2.0 * std::f64::consts::PI).sqrt());
+                                            (x, density)
+                                        })
+                                        .collect();
+                                    chart
+                                        .draw_series(LineSeries::new(kde.into_iter(), style))
+                                        .map_err(|e| e.to_string())?;
                                 }
                             }
                             "violin" => {
@@ -3321,35 +4123,60 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 if let Some((ref unique_groups, ref group_indices)) = aes_groups {
                                     let style = parse_color(color_name);
                                     for (gi, _gn) in unique_groups.iter().enumerate() {
-                                        let group_y: Vec<f64> = y_values.iter().zip(group_indices.iter())
+                                        let group_y: Vec<f64> = y_values
+                                            .iter()
+                                            .zip(group_indices.iter())
                                             .filter(|(&y, &g)| !y.is_nan() && g == gi)
                                             .map(|(&y, _)| y)
                                             .collect();
-                                        if group_y.len() < 2 { continue; }
+                                        if group_y.len() < 2 {
+                                            continue;
+                                        }
                                         let n = group_y.len() as f64;
                                         let mean = group_y.iter().sum::<f64>() / n;
-                                        let std = (group_y.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n).sqrt();
+                                        let std = (group_y
+                                            .iter()
+                                            .map(|v| (v - mean).powi(2))
+                                            .sum::<f64>()
+                                            / n)
+                                            .sqrt();
                                         let h = 1.06 * std * n.powf(-0.2);
-                                        let y_min_g = group_y.iter().cloned().fold(f64::INFINITY, |a, b| a.min(b));
-                                        let y_max_g = group_y.iter().cloned().fold(f64::NEG_INFINITY, |a, b| a.max(b));
+                                        let y_min_g = group_y
+                                            .iter()
+                                            .cloned()
+                                            .fold(f64::INFINITY, |a, b| a.min(b));
+                                        let y_max_g = group_y
+                                            .iter()
+                                            .cloned()
+                                            .fold(f64::NEG_INFINITY, |a, b| a.max(b));
                                         let range = y_max_g - y_min_g;
                                         let n_pts = 50;
                                         let center = gi as f64;
-                                        let kde: Vec<(f64, f64)> = (0..n_pts).map(|i| {
-                                            let y = y_min_g + range * i as f64 / (n_pts - 1) as f64;
-                                            let density: f64 = group_y.iter()
-                                                .map(|&d| (-( (y - d) / h).powi(2) / 2.0).exp())
-                                                .sum::<f64>() / (n * h * (2.0 * std::f64::consts::PI).sqrt());
-                                            (center + density * 0.3, y)
-                                        }).collect();
-                                        let kde_mirror: Vec<(f64, f64)> = kde.iter().rev()
+                                        let kde: Vec<(f64, f64)> = (0..n_pts)
+                                            .map(|i| {
+                                                let y =
+                                                    y_min_g + range * i as f64 / (n_pts - 1) as f64;
+                                                let density: f64 = group_y
+                                                    .iter()
+                                                    .map(|&d| (-((y - d) / h).powi(2) / 2.0).exp())
+                                                    .sum::<f64>()
+                                                    / (n * h * (2.0 * std::f64::consts::PI).sqrt());
+                                                (center + density * 0.3, y)
+                                            })
+                                            .collect();
+                                        let kde_mirror: Vec<(f64, f64)> = kde
+                                            .iter()
+                                            .rev()
                                             .map(|(x, y)| (2.0 * center - x, *y))
                                             .collect();
                                         let mut polygon = kde;
                                         polygon.extend(kde_mirror);
-                                        chart.draw_series(std::iter::once(
-                                            Polygon::new(polygon, style.filled())
-                                        )).map_err(|e| e.to_string())?;
+                                        chart
+                                            .draw_series(std::iter::once(Polygon::new(
+                                                polygon,
+                                                style.filled(),
+                                            )))
+                                            .map_err(|e| e.to_string())?;
                                     }
                                 }
                             }
@@ -3360,22 +4187,22 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
             }
         }
     }
-    
+
     // 12. Draw legend if enabled and multiple series exist
     // The legend is drawn in the empty space reserved by increasing the
     // corresponding margin. It is aligned to the plot area edge and centered
     // on the perpendicular axis.
     let legend_svg = if let Some((box_width, box_height)) = legend_dims {
         let box_padding = 10.0; // padding inside legend box
-        let text_offset = 2.0;  // vertical offset for text baseline
+        let text_offset = 2.0; // vertical offset for text baseline
         let box_width = box_width.ceil() as i32;
         let box_height = box_height.ceil() as i32;
 
         // Plot area boundaries (reduced by legend-adjusted margins)
         let plot_x_start = margin_left as i32;
-        let plot_x_end   = width as i32 - margin_right as i32;
+        let plot_x_end = width as i32 - margin_right as i32;
         let plot_y_start = margin_top as i32;
-        let plot_y_end   = height as i32 - margin_bottom as i32;
+        let plot_y_end = height as i32 - margin_bottom as i32;
 
         let (legend_box_x, legend_box_y) = if legend_location == "outside" {
             match legend_position.as_str() {
@@ -3384,19 +4211,19 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                     let x = (plot_x_start + plot_x_end) / 2 - box_width / 2;
                     let y = plot_y_end; // top of reserved space
                     (x, y)
-                },
+                }
                 "left" => {
                     // Left of the plot area, centered vertically
                     let x = plot_x_start - box_width; // start of reserved space
                     let y = (plot_y_start + plot_y_end) / 2 - box_height / 2;
                     (x, y)
-                },
+                }
                 "right" => {
                     // Right of the plot area, centered vertically
                     let x = plot_x_end; // start of reserved space
                     let y = (plot_y_start + plot_y_end) / 2 - box_height / 2;
                     (x, y)
-                },
+                }
                 _ => {
                     // Default: top-right inside plot area
                     let x = plot_x_end - box_width - 10;
@@ -3432,16 +4259,28 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                     if let Some(HayashiValue::Str(c)) = config.get("color") {
                         c.clone()
                     } else {
-                        format!("#{:02X}{:02X}{:02X}",
-                            get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
+                        format!(
+                            "#{:02X}{:02X}{:02X}",
+                            get_series_color(idx).0,
+                            get_series_color(idx).1,
+                            get_series_color(idx).2
+                        )
                     }
                 } else {
-                    format!("#{:02X}{:02X}{:02X}",
-                        get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
+                    format!(
+                        "#{:02X}{:02X}{:02X}",
+                        get_series_color(idx).0,
+                        get_series_color(idx).1,
+                        get_series_color(idx).2
+                    )
                 }
             } else {
-                format!("#{:02X}{:02X}{:02X}",
-                    get_series_color(idx).0, get_series_color(idx).1, get_series_color(idx).2)
+                format!(
+                    "#{:02X}{:02X}{:02X}",
+                    get_series_color(idx).0,
+                    get_series_color(idx).1,
+                    get_series_color(idx).2
+                )
             };
 
             if horizontal {
@@ -3479,14 +4318,14 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     } else {
         None
     };
-    
+
     // Insert legend before closing </svg> tag
     if let Some(legend_html) = legend_svg {
         if let Some(pos) = svg_buffer.rfind("</svg>") {
             svg_buffer.insert_str(pos, &legend_html);
         }
     }
-    
+
     Ok(svg_buffer)
 }
 
