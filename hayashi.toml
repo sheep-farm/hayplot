@@ -1,0 +1,10 @@
+[plugin]
+name = "hayplot"
+version = "1.4.0"
+author = "sheep-farm"
+description = "A native plotting plugin for Hayashi using Apache Arrow FFI and Plotters"
+license = "MIT"
+repository = "https://github.com/sheep-farm/hayplot"
+
+[hayashi]
+min_version = "0.2.9"

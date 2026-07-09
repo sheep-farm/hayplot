@@ -1,9 +1,10 @@
 [package]
 name = "hayplot"
-version = "1.4.0"
+version = "1.5.2"
 edition = "2021"
 description = "A native plotting plugin for Hayashi using Apache Arrow FFI and Plotters"
 license = "MIT"
+repository = "https://github.com/sheep-farm/hayplot"
 
 [lib]
 crate-type = ["cdylib"]
@@ -24,3 +25,9 @@ base64 = { version = "0.22", optional = true }
 
 # Álgebra linear leve para regressão e smoothing (para versões futuras)
 # nalgebra = { version = "0.33", default-features = false, features = ["std"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = "symbols"
+panic = "abort"

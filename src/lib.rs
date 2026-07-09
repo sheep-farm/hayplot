@@ -1,3 +1,4 @@
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 use hayashi_plugin_sdk::{hayashi_fn, hayashi_plugin};
 use hayashi_plugin_sdk::arrow::array::{Array, ArrayRef, StructArray};
 use hayashi_plugin_sdk::value::{HayashiValue, FromHayashi, IntoHayashi};
@@ -1398,32 +1399,16 @@ fn render_png_impl(plot: HashMap<String, HayashiValue>) -> Result<Vec<u8>, Strin
     Ok(png_buffer)
 }
 
+// Helper functions moved to utils.rs
 
-/// Helper function to extract a column as Vec<f64> from a StructArray
-// Moved to utils.rs
+// parse colors from string names or hex codes — moved to utils.rs
+// parse colors from string names or hex codes to RGBColor — moved to utils.rs
 
-/// Helper function to filter an Arrow array by a boolean mask
-// Moved to utils.rs
+// get color for series index — moved to utils.rs
+// Catmull-Rom spline interpolation — moved to math.rs
 
-/// Helper function to parse colors from string names or hex codes
-// Moved to utils.rs
-
-/// Helper function to parse colors from string names or hex codes to RGBColor
-// Moved to utils.rs
-
-/// Helper function to get color for series index (cycles through palette)
-// Moved to utils.rs
-
-/// Helper function for Catmull-Rom spline interpolation
-/// Returns smooth points between control points
-// Moved to math.rs
-
-/// Helper function for simple linear regression (y = mx + b)
-/// Returns (slope, intercept, r_squared)
-// Moved to math.rs
-
-/// Helper function to calculate standard error of regression
-// Moved to math.rs
+// simple linear regression (y = mx + b) — moved to math.rs
+// standard error of regression — moved to math.rs
 
 /// Render a faceted plot (facet_wrap or facet_grid).
 /// Splits the DataFrame by categorical column(s), creates a grid of sub-plots
@@ -1533,7 +1518,7 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
         if n_groups == 0 {
             return Err("facet_wrap: no groups found in facet column".to_string());
         }
-        let nrows = (n_groups + ncol - 1) / ncol;
+        let nrows = n_groups.div_ceil(ncol);
         // Panel labels in row-major order
         let labels: Vec<String> = groups.clone();
         (labels, nrows, ncol, Vec::new(), Vec::new())
@@ -1814,7 +1799,7 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                             for (i, x_vals) in panel.x_values.iter().enumerate() {
                                 let sname = &x_series[i];
                                 let color = if let Some(ref configs) = series_config {
-                                    if let Some(ref c) = configs.get(sname) {
+                                    if let Some(c) = configs.get(sname) {
                                         if let Some(HayashiValue::Str(col)) = c.get("color") {
                                             parse_color(col)
                                         } else {
@@ -1834,7 +1819,7 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                                 chart.draw_series(
                                     x_vals.iter().zip(panel.y_values.iter())
                                         .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                        .map(|(&x, &y)| Circle::new((x, y), size as i32, style.clone()))
+                                        .map(|(&x, &y)| Circle::new((x, y), size as i32, style))
                                 ).map_err(|e| e.to_string())?;
                             }
                         }
@@ -1845,7 +1830,7 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                             for (i, x_vals) in panel.x_values.iter().enumerate() {
                                 let sname = &x_series[i];
                                 let color = if let Some(ref configs) = series_config {
-                                    if let Some(ref c) = configs.get(sname) {
+                                    if let Some(c) = configs.get(sname) {
                                         if let Some(HayashiValue::Str(col)) = c.get("color") {
                                             parse_color(col).stroke_width(size as u32)
                                         } else {
@@ -1856,7 +1841,7 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                                 let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(panel.y_values.iter())
                                     .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x,&y)| (x,y)).collect();
-                                pts.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
+                                pts.sort_by(|a, b| a.0.total_cmp(&b.0));
                                 chart.draw_series(
                                     LineSeries::new(pts.into_iter(), color)
                                 ).map_err(|e| e.to_string())?;
@@ -1867,9 +1852,9 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                                 let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(panel.y_values.iter())
                                     .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x,&y)| (x,y)).collect();
-                                pts.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
+                                pts.sort_by(|a, b| a.0.total_cmp(&b.0));
                                 chart.draw_series(
-                                    LineSeries::new(pts.into_iter(), style.clone())
+                                    LineSeries::new(pts.into_iter(), style)
                                 ).map_err(|e| e.to_string())?;
                             }
                         }
@@ -1881,7 +1866,7 @@ fn render_facets_impl(plot: HashMap<String, HayashiValue>) -> Result<String, Str
                                 x_vals.iter().zip(panel.y_values.iter())
                                     .filter(|(&x,&y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x,&y)| {
-                                        Rectangle::new([(x - size/2.0, 0.0), (x + size/2.0, y)], style.clone())
+                                        Rectangle::new([(x - size/2.0, 0.0), (x + size/2.0, y)], style)
                                     })
                             ).map_err(|e| e.to_string())?;
                         }
@@ -2168,16 +2153,15 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
     let x_min = if x_min.is_infinite() { 0.0 } else { x_min - (x_max - x_min).abs() * 0.05 };
     let x_max = if x_max.is_infinite() { 10.0 } else { x_max + (x_max - x_min).abs() * 0.05 };
     // For histograms, y-axis starts at 0 (frequencies are non-negative)
-    let y_min = if y_min.is_infinite() { 0.0 } else if has_histogram { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
+    let y_min = if y_min.is_infinite() || has_histogram { 0.0 } else { y_min - (y_max - y_min).abs() * 0.05 };
     let y_max = if y_max.is_infinite() { 10.0 } else { y_max + (y_max - y_min).abs() * 0.05 };
 
     // 7. Apply scale limits if specified
-    let manual_x_limits = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-        scales.contains_key("x_limit_min") && scales.contains_key("x_limit_max")
-    } else { false };
-    let manual_y_limits = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
-        scales.contains_key("y_limit_min") && scales.contains_key("y_limit_max")
-    } else { false };
+    let scales_dict = if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
+        Some(scales)
+    } else { None };
+    let manual_x_limits = scales_dict.is_some_and(|s| s.contains_key("x_limit_min") && s.contains_key("x_limit_max"));
+    let manual_y_limits = scales_dict.is_some_and(|s| s.contains_key("y_limit_min") && s.contains_key("y_limit_max"));
 
     let (x_min, x_max) = if manual_x_limits {
         if let Some(HayashiValue::Dict(scales)) = plot.get("scales") {
@@ -2504,7 +2488,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         
                                         // Check for series-specific config
                                         let series_color = if let Some(ref configs) = series_config {
-                                            if let Some(ref config) = configs.get(series_name) {
+                                            if let Some(config) = configs.get(series_name) {
                                                 if let Some(HayashiValue::Str(c)) = config.get("color") {
                                                     parse_color(c)
                                                 } else {
@@ -2546,7 +2530,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         chart.draw_series(
                                             x_vals.iter().zip(y_values.iter())
                                                 .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
-                                                .map(|(&x, &y)| Circle::new((x, y), size as i32, style.clone()))
+                                                .map(|(&x, &y)| Circle::new((x, y), size as i32, style))
                                         ).map_err(|e| e.to_string())?;
                                     }
                                 }
@@ -2562,7 +2546,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                             .filter(|((&x, &y), &g)| !x.is_nan() && !y.is_nan() && g == gi)
                                             .map(|((&x, &y), _)| (x, y))
                                             .collect();
-                                        points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                        points.sort_by(|a, b| a.0.total_cmp(&b.0));
                                         if points.len() >= 2 {
                                             chart.draw_series(
                                                 LineSeries::new(points.into_iter(),
@@ -2576,7 +2560,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         
                                         // Check for series-specific config
                                         let series_color = if let Some(ref configs) = series_config {
-                                            if let Some(ref config) = configs.get(series_name) {
+                                            if let Some(config) = configs.get(series_name) {
                                                 if let Some(HayashiValue::Str(c)) = config.get("color") {
                                                     parse_color(c)
                                                 } else {
@@ -2609,7 +2593,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                             .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                             .map(|(&x, &y)| (x, y))
                                             .collect();
-                                        points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                        points.sort_by(|a, b| a.0.total_cmp(&b.0));
                                         
                                         chart.draw_series(
                                             LineSeries::new(points.into_iter(), series_color.stroke_width(series_size as u32))
@@ -2622,10 +2606,10 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                             .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                             .map(|(&x, &y)| (x, y))
                                             .collect();
-                                        points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                        points.sort_by(|a, b| a.0.total_cmp(&b.0));
                                         
                                         chart.draw_series(
-                                            LineSeries::new(points.into_iter(), style.clone())
+                                            LineSeries::new(points.into_iter(), style)
                                         ).map_err(|e| e.to_string())?;
                                     }
                                 }
@@ -2643,7 +2627,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     x_vals.iter().zip(y_values.iter())
                                         .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                         .map(|(&x, &y)| {
-                                            Rectangle::new([(x - bar_width/2.0, 0.0), (x + bar_width/2.0, y)], style.clone())
+                                            Rectangle::new([(x - bar_width/2.0, 0.0), (x + bar_width/2.0, y)], style)
                                         })
                                 ).map_err(|e| e.to_string())?;
                             }
@@ -2682,7 +2666,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                             let x_center = y_min + (i as f64 + 0.5) * bin_width;
                                             let bar_height = count as f64;
                                             let bar_width = bin_width * 0.9;
-                                            Rectangle::new([(x_center - bar_width/2.0, 0.0), (x_center + bar_width/2.0, bar_height)], style.clone())
+                                            Rectangle::new([(x_center - bar_width/2.0, 0.0), (x_center + bar_width/2.0, bar_height)], style)
                                         })
                                 ).map_err(|e| e.to_string())?;
                             }
@@ -2701,7 +2685,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     return Err("No valid data for boxplot".to_string());
                                 }
 
-                                valid_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                                valid_values.sort_by(|a, b| a.total_cmp(b));
                                 let n = valid_values.len();
 
                                 let q1_idx = n / 4;
@@ -2720,7 +2704,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 chart.draw_series(std::iter::once(Rectangle::new([
                                     (x_pos - box_width/2.0, q1),
                                     (x_pos + box_width/2.0, q3)
-                                ], style.clone()))).map_err(|e| e.to_string())?;
+                                ], style))).map_err(|e| e.to_string())?;
 
                                 chart.draw_series(std::iter::once(PathElement::new(
                                     vec![(x_pos - box_width/2.0, median), (x_pos + box_width/2.0, median)],
@@ -2790,7 +2774,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y))
                                     .collect();
-                                points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                points.sort_by(|a, b| a.0.total_cmp(&b.0));
 
                                 if points.is_empty() {
                                     return Err("No valid data for area plot".to_string());
@@ -2807,7 +2791,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         (x2, 0.0)
                                     ];
                                     chart.draw_series(std::iter::once(
-                                        Polygon::new(rect_points, style.clone())
+                                        Polygon::new(rect_points, style)
                                     )).map_err(|e| e.to_string())?;
                                 }
 
@@ -2905,7 +2889,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y))
                                     .collect();
-                                points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                points.sort_by(|a, b| a.0.total_cmp(&b.0));
 
                                 if points.is_empty() {
                                     return Err("No valid data for step plot".to_string());
@@ -3031,7 +3015,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y))
                                     .collect();
-                                points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                points.sort_by(|a, b| a.0.total_cmp(&b.0));
 
                                 if points.len() >= 2 {
                                     // Generate smooth spline points
@@ -3225,12 +3209,12 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                 let mut pts: Vec<(f64,f64)> = x_vals.iter().zip(ymin_vals.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y)).collect();
-                                pts.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                pts.sort_by(|a, b| a.0.total_cmp(&b.0));
 
                                 let mut pts_upper: Vec<(f64,f64)> = x_vals.iter().zip(ymax_vals.iter())
                                     .filter(|(&x, &y)| !x.is_nan() && !y.is_nan())
                                     .map(|(&x, &y)| (x, y)).collect();
-                                pts_upper.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                                pts_upper.sort_by(|a, b| a.0.total_cmp(&b.0));
 
                                 if pts.len() >= 2 && pts.len() == pts_upper.len() {
                                     let mut polygon = pts.clone();
@@ -3296,7 +3280,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
                                         .map(|(&x, &y)| {
                                             let dx = rng() * jw;
                                             let dy = rng() * jh;
-                                            Circle::new((x + dx, y + dy), size as i32, style.clone())
+                                            Circle::new((x + dx, y + dy), size as i32, style)
                                         })
                                 ).map_err(|e| e.to_string())?;
                             }
@@ -3444,7 +3428,7 @@ fn render_svg_impl(plot: HashMap<String, HayashiValue>) -> Result<String, String
         for (idx, series_name) in legend_items.iter().enumerate() {
             // Get color for this series
             let series_color = if let Some(ref configs) = series_config {
-                if let Some(ref config) = configs.get(series_name) {
+                if let Some(config) = configs.get(series_name) {
                     if let Some(HayashiValue::Str(c)) = config.get("color") {
                         c.clone()
                     } else {

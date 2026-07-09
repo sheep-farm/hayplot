@@ -222,6 +222,7 @@ pub fn get_series_color(idx: usize) -> RGBColor {
 }
 
 /// Implementation of filter_data
+#[allow(dead_code)]
 pub fn filter_data_impl(
     df_hayashi: HayashiValue,
     col: String,
